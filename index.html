@@ -30,6 +30,7 @@ margin-bottom: 15px;
 font-size: 0.85rem;
 color: #d4e0e8;
 border: 1px solid #4a5c6b;
+text-align: center;
 }
 .admin-badge {
 background: #4a5c3d;
@@ -88,14 +89,6 @@ color: #e8e0d5;
 background: linear-gradient(135deg, #4a5c3d 0%, #2d3d28 100%);
 margin-top: 10px;
 }
-.btn-warning {
-background: linear-gradient(135deg, #6b5a3d 0%, #4a3d28 100%);
-margin-top: 8px;
-}
-.btn-primary {
-background: linear-gradient(135deg, #3d4a5c 0%, #2d3d4a 100%);
-margin-top: 8px;
-}
 .stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
 .stat-box {
 background: #2d2018;
@@ -150,7 +143,6 @@ border: 1px solid #3d3128;
 border-radius: 8px;
 color: #8b7a6a;
 cursor: pointer;
-font-size: 0.9rem;
 }
 .filter-tab.active {
 background: #3d2817;
@@ -177,10 +169,10 @@ z-index: 3000;
 <div class="container">
 <div class="header">
 <h1>📋 Учёт заказов</h1>
-<p id="status">⏳ Загрузка...</p>
+<p id="status">⏳ Подключение...</p>
 </div>
 
-<div id="userInfo" class="user-info"></div>
+<div id="userInfo" class="user-info">Загрузка...</div>
 
 <div class="card">
 <div class="form-group">
@@ -213,9 +205,8 @@ z-index: 3000;
 <button class="btn" onclick="addOrder()">✓ ДОБАВИТЬ ЗАКАЗ</button>
 </div>
 
-<!-- ФИЛЬТРЫ ДЛЯ АДМИНА -->
 <div id="adminFilters" class="card" style="display:none;">
-<h3 style="margin-bottom:12px;color:#b8a89a;">📊 Фильтр заказов</h3>
+<h3 style="margin-bottom:12px;color:#b8a89a;">📊 Фильтр</h3>
 <div class="filter-tabs">
 <button class="filter-tab active" onclick="setFilter('all')">Все заказы</button>
 <button class="filter-tab" onclick="setFilter('my')">Мои заказы</button>
@@ -235,10 +226,7 @@ z-index: 3000;
 </div>
 
 <button class="btn btn-success" onclick="downloadXLSX()">
-📊 Выгрузка в Excel (XLSX)
-</button>
-<button class="btn btn-warning" onclick="downloadAllXLSX()" id="btnDownloadAll" style="display:none;">
-📥 Выгрузить ВСЕ заказы (админ)
+📊 Выгрузка в Excel
 </button>
 
 <h3 style="margin:12px 0;color:#b8a89a;">📋 Список заказов</h3>
@@ -248,10 +236,9 @@ z-index: 3000;
 
 <div id="toast" class="toast"></div>
 
-<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
 
 // ===== FIREBASE CONFIG =====
 const firebaseConfig = {
@@ -268,94 +255,94 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ===== ИДЕНТИФИКАЦИЯ ПОЛЬЗОВАТЕЛЯ =====
+// ===== GLOBAL VARIABLES =====
 let currentUserId = null;
 let isAdmin = false;
-let currentFilter = 'my'; // 'my' или 'all'
+let currentFilter = 'all';
 let allOrders = [];
-let orders = [];
+let myOrders = [];
 
-// Получаем данные из Telegram WebApp
+// ===== INIT USER =====
 function initUser() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const tgUser = urlParams.get('tgUser');
+  // Пытаемся получить данные из Telegram
+  const tgWebApp = window.Telegram?.WebApp;
   
-  if (tgUser) {
-    try {
-      const userData = JSON.parse(decodeURIComponent(tgUser));
-      currentUserId = 'user_' + userData.id;
-      const username = userData.username || userData.first_name || 'Пользователь';
-      
-      // Проверка на админа (замените ID на ваш)
-      const ADMIN_IDS = ['user_5059571966']; // Ваш Telegram ID
-      isAdmin = ADMIN_IDS.includes(currentUserId);
-      
-      document.getElementById('userInfo').innerHTML = `
-        👤 ${username} 
-        ${isAdmin ? '<span class="admin-badge">АДМИН</span>' : ''}
-      `;
-      
-      console.log('User:', currentUserId, 'Admin:', isAdmin);
-    } catch(e) {
-      currentUserId = 'user_anonymous_' + Math.random().toString(36).substr(2, 9);
-      document.getElementById('userInfo').textContent = '👤 Анонимный пользователь';
-    }
+  if (tgWebApp?.initDataUnsafe?.user) {
+    const tgUser = tgWebApp.initDataUnsafe.user;
+    currentUserId = 'user_' + tgUser.id;
+    const username = tgUser.username || tgUser.first_name || 'Пользователь';
+    
+    // ЗАМЕНИТЕ на ваш Telegram ID!
+    const ADMIN_ID = 'user_5059571966'; // Ваш ID из @userinfobot
+    isAdmin = (currentUserId === ADMIN_ID);
+    
+    document.getElementById('userInfo').innerHTML = `
+      👤 ${username} ${isAdmin ? '<span class="admin-badge">АДМИН</span>' : ''}
+    `;
+    
+    console.log('✅ Telegram user:', currentUserId, 'Admin:', isAdmin);
   } else {
-    // Если не из Telegram
+    // Не из Telegram - генерируем ID
     let savedId = localStorage.getItem('orders_user_id');
     if (!savedId) {
       savedId = 'user_' + Math.random().toString(36).substr(2, 9);
       localStorage.setItem('orders_user_id', savedId);
     }
     currentUserId = savedId;
-    document.getElementById('userInfo').textContent = '👤 ' + currentUserId;
+    document.getElementById('userInfo').textContent = '👤 ' + currentUserId + ' (локальный)';
+    console.log('✅ Local user:', currentUserId);
   }
   
   if (isAdmin) {
     document.getElementById('adminFilters').style.display = 'block';
-    document.getElementById('btnDownloadAll').style.display = 'block';
   }
   
+  // Загружаем заказы
   loadOrders();
 }
 
-// ===== ЗАГРУЗКА ЗАКАЗОВ =====
+// ===== LOAD ORDERS =====
 function loadOrders() {
-  document.getElementById('status').innerHTML = '⏳ Синхронизация...';
+  document.getElementById('status').textContent = '🔄 Синхронизация...';
   
-  if (isAdmin && currentFilter === 'all') {
-    // Админ видит все заказы
-    const allOrdersRef = ref(db, 'all_orders');
-    onValue(allOrdersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        allOrders = Object.values(data);
-        orders = allOrders;
-      } else {
-        orders = [];
-      }
-      renderOrders();
-      updateStats();
-      document.getElementById('status').innerHTML = '✅ Все заказы загружены';
-    });
-  } else {
-    // Пользователь видит только свои
+  // Подписываемся на ВСЕ заказы
+  const allOrdersRef = ref(db, 'all_orders');
+  onValue(allOrdersRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      allOrders = Object.values(data);
+      console.log('📊 All orders loaded:', allOrders.length);
+    } else {
+      allOrders = [];
+    }
+    updateDisplay();
+    document.getElementById('status').textContent = '✅ Подключено';
+  });
+  
+  // Подписываемся на заказы текущего пользователя
+  if (currentUserId) {
     const userOrdersRef = ref(db, `orders/${currentUserId}`);
     onValue(userOrdersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        orders = Object.values(data);
+        myOrders = Object.values(data);
+        console.log('👤 My orders loaded:', myOrders.length);
       } else {
-        orders = [];
+        myOrders = [];
       }
-      renderOrders();
-      updateStats();
-      document.getElementById('status').innerHTML = '✅ Мои заказы загружены';
+      updateDisplay();
     });
   }
 }
 
-// ===== ДОБАВЛЕНИЕ ЗАКАЗА =====
+// ===== UPDATE DISPLAY =====
+function updateDisplay() {
+  const orders = (isAdmin && currentFilter === 'all') ? allOrders : myOrders;
+  renderOrders(orders);
+  updateStats(orders);
+}
+
+// ===== ADD ORDER =====
 window.addOrder = function() {
   const zso = document.getElementById('zso').value.trim();
   const phone = document.getElementById('phone').value.trim();
@@ -380,14 +367,19 @@ window.addOrder = function() {
     createdAt: Date.now()
   };
 
-  // Сохраняем в личную папку пользователя
-  const userOrderRef = ref(db, `orders/${currentUserId}/${order.id}`);
-  set(userOrderRef, order);
+  // Сохраняем в ОБЩУЮ базу (все видят)
+  const newOrderRef = push(ref(db, 'all_orders'));
+  set(newOrderRef, order).then(() => {
+    console.log('✅ Saved to all_orders');
+  }).catch(err => {
+    console.error('Save error:', err);
+    showToast('⚠️ Ошибка сохранения');
+  });
 
-  // Если админ - добавляем в общую базу
-  if (isAdmin) {
-    const allOrderRef = ref(db, `all_orders/${order.id}`);
-    set(allOrderRef, order);
+  // Сохраняем в ЛИЧНУЮ папку пользователя
+  if (currentUserId) {
+    const userOrderRef = ref(db, `orders/${currentUserId}/${order.id}`);
+    set(userOrderRef, order);
   }
 
   // Очищаем форму
@@ -400,65 +392,47 @@ window.addOrder = function() {
   showToast('✅ Заказ добавлен!');
 };
 
-// ===== ФИЛЬТРЫ =====
+// ===== FILTER =====
 window.setFilter = function(filter) {
   currentFilter = filter;
-  document.querySelectorAll('.filter-tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
+  document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
   event.target.classList.add('active');
-  loadOrders();
+  updateDisplay();
 };
 
-// ===== ВЫГРУЗКА EXCEL =====
+// ===== DOWNLOAD EXCEL =====
 window.downloadXLSX = function() {
+  const orders = (isAdmin && currentFilter === 'all') ? allOrders : myOrders;
+  
   if (orders.length === 0) { showToast('Нет заказов'); return; }
-  createAndDownloadXLSX(orders, 'мои_заказы');
-};
 
-window.downloadAllXLSX = function() {
-  if (!isAdmin) return;
-  if (allOrders.length === 0) { showToast('Нет заказов'); return; }
-  createAndDownloadXLSX(allOrders, 'все_заказы');
-};
-
-function createAndDownloadXLSX(ordersData, fileNamePrefix) {
   const data = [
     ['📋 УЧЁТ ЗАКАЗОВ'],
     ['Дата выгрузки:', new Date().toLocaleString('ru-RU')],
-    ['Пользователь:', currentUserId],
     [],
     ['№', 'Дата', 'Пользователь', '№ ЗСО', 'Телефон', 'Услуга', 'Сумма', 'Примечания']
   ];
 
-  ordersData.forEach((o, i) => {
-    data.push([
-      i + 1,
-      o.date,
-      o.userId || 'unknown',
-      o.zsoNumber,
-      o.phone || '',
-      o.service,
-      o.price,
-      o.notes || ''
-    ]);
+  orders.forEach((o, i) => {
+    data.push([i + 1, o.date, o.userId || '', o.zsoNumber, o.phone || '', o.service, o.price, o.notes || '']);
   });
 
-  const totalSum = ordersData.reduce((sum, o) => sum + (o.price || 0), 0);
-  data.push([], ['ИТОГО:', '', '', '', 'Заказов:', ordersData.length, 'Сумма:', totalSum]);
+  const totalSum = orders.reduce((sum, o) => sum + (o.price || 0), 0);
+  data.push([], ['ИТОГО:', '', '', '', 'Заказов:', orders.length, 'Сумма:', totalSum]);
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [{wch: 5}, {wch: 18}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 30}, {wch: 12}, {wch: 25}];
   XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
 
-  const fileName = `${fileNamePrefix}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const prefix = (isAdmin && currentFilter === 'all') ? 'все_заказы' : 'мои_заказы';
+  const fileName = `${prefix}_${new Date().toISOString().slice(0,10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
   showToast('✅ Файл скачан!');
-}
+};
 
-// ===== ОТОБРАЖЕНИЕ =====
-function renderOrders() {
+// ===== RENDER =====
+function renderOrders(orders) {
   const list = document.getElementById('ordersList');
   
   if (orders.length === 0) {
@@ -469,8 +443,8 @@ function renderOrders() {
   let html = '';
   orders.forEach(o => {
     html += '<div class="order-item">';
-    if (isAdmin && o.userId) {
-      html += `<span class="user-tag">👤 ${o.userId}</span>`;
+    if (isAdmin && o.userId && currentFilter === 'all') {
+      html += `<span class="user-tag">👤 ${o.userId.replace('user_', '')}</span>`;
     }
     html += '<button class="delete-btn" onclick="deleteOrder(' + o.id + ')">×</button>';
     html += '<h4>№ ' + escapeHtml(o.zsoNumber) + '</h4>';
@@ -488,13 +462,18 @@ function renderOrders() {
 window.deleteOrder = function(id) {
   if (!confirm('Удалить заказ?')) return;
   
-  if (isAdmin) {
-    const allOrderRef = ref(db, `all_orders/${id}`);
+  // Удаляем из общей базы
+  const orderToDelete = allOrders.find(o => o.id === id);
+  if (orderToDelete) {
+    const allOrderRef = ref(db, `all_orders/${Object.keys(allOrders).find(key => allOrders[key].id === id)}`);
     set(allOrderRef, null);
   }
   
-  const userOrderRef = ref(db, `orders/${currentUserId}/${id}`);
-  set(userOrderRef, null);
+  // Удаляем из личной
+  if (currentUserId) {
+    const userOrderRef = ref(db, `orders/${currentUserId}/${id}`);
+    set(userOrderRef, null);
+  }
   
   showToast('Заказ удалён');
 };
@@ -506,7 +485,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function updateStats() {
+function updateStats(orders) {
   document.getElementById('totalOrders').textContent = orders.length;
   const sum = orders.reduce((a, o) => a + (o.price || 0), 0);
   document.getElementById('totalSum').textContent = sum.toLocaleString() + '₽';
@@ -519,8 +498,11 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// ===== INIT =====
-window.addEventListener('DOMContentLoaded', initUser);
+// ===== START =====
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('🚀 App loaded');
+  initUser();
+});
 </script>
 </body>
 </html>
