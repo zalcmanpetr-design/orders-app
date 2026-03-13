@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#3d2817">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Учёт заказов</title>
-<!-- SheetJS для Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -15,25 +14,37 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 background: linear-gradient(135deg, #1a1a1a 0%, #2d1f16 50%, #1a1a1a 100%);
 min-height: 100vh;
 padding: 15px;
-padding-top: max(15px, env(safe-area-inset-top));
-padding-bottom: max(15px, env(safe-area-inset-bottom));
 color: #e8e0d5;
 font-size: 16px;
 line-height: 1.5;
 }
-.container { max-width: 500px; margin: 0 auto; }
+.container { max-width: 600px; margin: 0 auto; }
 .header { text-align: center; margin-bottom: 20px; padding-top: 10px; }
 .header h1 { font-size: 1.5rem; margin-bottom: 6px; color: #d4c4b0; }
 .header p { font-size: 0.85rem; color: #8b7a6a; }
-.status-ready { color: #4a5c3d; font-weight: 600; }
-.status-sync { color: #4a5c6b; font-weight: 600; }
+.user-info {
+background: #2d3d4a;
+padding: 10px;
+border-radius: 8px;
+margin-bottom: 15px;
+font-size: 0.85rem;
+color: #d4e0e8;
+border: 1px solid #4a5c6b;
+}
+.admin-badge {
+background: #4a5c3d;
+color: white;
+padding: 4px 10px;
+border-radius: 6px;
+font-size: 0.75rem;
+margin-left: 8px;
+}
 .card {
 background: #24201c;
 border-radius: 12px;
 padding: 18px;
 margin-bottom: 15px;
 border: 1px solid #3d3128;
-box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 .form-group { margin-bottom: 15px; }
 label { display: block; margin-bottom: 6px; color: #b8a89a; font-size: 0.85rem; }
@@ -59,7 +70,6 @@ font-size: 1.25rem;
 font-weight: 600;
 color: #a67c52;
 margin-top: 10px;
-border: 1px solid #4a3f35;
 }
 .btn {
 width: 100%;
@@ -72,13 +82,19 @@ cursor: pointer;
 text-transform: uppercase;
 background: linear-gradient(135deg, #5c3d2e 0%, #3d2817 100%);
 color: #e8e0d5;
--webkit-appearance: none;
 }
 .btn:active { transform: scale(0.96); opacity: 0.9; }
 .btn-success {
 background: linear-gradient(135deg, #4a5c3d 0%, #2d3d28 100%);
-border: 1px solid #5a6b4d;
 margin-top: 10px;
+}
+.btn-warning {
+background: linear-gradient(135deg, #6b5a3d 0%, #4a3d28 100%);
+margin-top: 8px;
+}
+.btn-primary {
+background: linear-gradient(135deg, #3d4a5c 0%, #2d3d4a 100%);
+margin-top: 8px;
 }
 .stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
 .stat-box {
@@ -87,7 +103,6 @@ padding: 14px;
 border-radius: 10px;
 text-align: center;
 flex: 1;
-border: 1px solid #3d3128;
 }
 .stat-box h3 { font-size: 1.6rem; margin-bottom: 4px; color: #d4c4b0; }
 .stat-box p { font-size: 0.75rem; color: #8b7a6a; }
@@ -98,11 +113,19 @@ padding: 16px;
 margin-bottom: 12px;
 border-left: 3px solid #6b4e3d;
 position: relative;
-border: 1px solid #2d2824;
 }
-.order-item h4 { color: #d4c4b0; margin-bottom: 6px; padding-right: 50px; }
+.order-item h4 { color: #d4c4b0; margin-bottom: 6px; }
 .order-item p { color: #9a8a7a; font-size: 0.9rem; margin-bottom: 3px; }
 .order-item .price { color: #a67c52; font-weight: 600; margin-top: 6px; }
+.order-item .user-tag {
+background: #3d4a5c;
+color: #d4e0e8;
+padding: 2px 8px;
+border-radius: 4px;
+font-size: 0.75rem;
+display: inline-block;
+margin-bottom: 6px;
+}
 .order-item .date { font-size: 0.75rem; color: #6b5a4a; margin-top: 8px; }
 .delete-btn {
 position: absolute;
@@ -113,8 +136,26 @@ border: none;
 color: #5c2e2e;
 font-size: 1.6rem;
 cursor: pointer;
-width: 36px;
-height: 36px;
+}
+.filter-tabs {
+display: flex;
+gap: 8px;
+margin-bottom: 15px;
+}
+.filter-tab {
+flex: 1;
+padding: 12px;
+background: #2d2824;
+border: 1px solid #3d3128;
+border-radius: 8px;
+color: #8b7a6a;
+cursor: pointer;
+font-size: 0.9rem;
+}
+.filter-tab.active {
+background: #3d2817;
+border-color: #8b5a2b;
+color: #e8e0d5;
 }
 .toast {
 position: fixed;
@@ -128,42 +169,27 @@ opacity: 0;
 transition: opacity 0.3s;
 pointer-events: none;
 z-index: 3000;
-border: 1px solid #3d3128;
 }
 .toast.show { opacity: 1; }
-.sync-indicator {
-display: inline-block;
-width: 8px;
-height: 8px;
-border-radius: 50%;
-background: #4a5c3d;
-margin-right: 6px;
-}
-.sync-indicator.syncing {
-background: #4a5c6b;
-animation: pulse 1s infinite;
-}
-@keyframes pulse {
-0%, 100% { opacity: 1; }
-50% { opacity: 0.5; }
-}
 </style>
 </head>
 <body>
 <div class="container">
 <div class="header">
 <h1>📋 Учёт заказов</h1>
-<p id="status"><span class="sync-indicator" id="syncIndicator"></span>⏳ Подключение...</p>
+<p id="status">⏳ Загрузка...</p>
 </div>
+
+<div id="userInfo" class="user-info"></div>
 
 <div class="card">
 <div class="form-group">
 <label>№ ЗСО/ЗНД *</label>
-<input type="text" id="zso" placeholder="Введите номер" autocomplete="off">
+<input type="text" id="zso" placeholder="Введите номер">
 </div>
 <div class="form-group">
 <label>Телефон</label>
-<input type="tel" id="phone" placeholder="+7 (___) ___-__-__" autocomplete="off">
+<input type="tel" id="phone" placeholder="+7 (___) ___-__-__">
 </div>
 <div class="form-group">
 <label>Услуга *</label>
@@ -184,7 +210,16 @@ animation: pulse 1s infinite;
 <label>Примечания</label>
 <textarea id="notes" placeholder="Доп. информация..."></textarea>
 </div>
-<button class="btn" id="addBtn" onclick="addOrder()">✓ ДОБАВИТЬ ЗАКАЗ</button>
+<button class="btn" onclick="addOrder()">✓ ДОБАВИТЬ ЗАКАЗ</button>
+</div>
+
+<!-- ФИЛЬТРЫ ДЛЯ АДМИНА -->
+<div id="adminFilters" class="card" style="display:none;">
+<h3 style="margin-bottom:12px;color:#b8a89a;">📊 Фильтр заказов</h3>
+<div class="filter-tabs">
+<button class="filter-tab active" onclick="setFilter('all')">Все заказы</button>
+<button class="filter-tab" onclick="setFilter('my')">Мои заказы</button>
+</div>
 </div>
 
 <div class="card">
@@ -202,6 +237,9 @@ animation: pulse 1s infinite;
 <button class="btn btn-success" onclick="downloadXLSX()">
 📊 Выгрузка в Excel (XLSX)
 </button>
+<button class="btn btn-warning" onclick="downloadAllXLSX()" id="btnDownloadAll" style="display:none;">
+📥 Выгрузить ВСЕ заказы (админ)
+</button>
 
 <h3 style="margin:12px 0;color:#b8a89a;">📋 Список заказов</h3>
 <div id="ordersList"></div>
@@ -210,10 +248,10 @@ animation: pulse 1s infinite;
 
 <div id="toast" class="toast"></div>
 
-<!-- FIREBASE SDK -->
+<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
 
 // ===== FIREBASE CONFIG =====
 const firebaseConfig = {
@@ -227,63 +265,97 @@ const firebaseConfig = {
   measurementId: "G-Y9MMTR52WJ"
 };
 
-// Инициализация Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const ordersRef = ref(db, 'orders');
 
+// ===== ИДЕНТИФИКАЦИЯ ПОЛЬЗОВАТЕЛЯ =====
+let currentUserId = null;
+let isAdmin = false;
+let currentFilter = 'my'; // 'my' или 'all'
+let allOrders = [];
 let orders = [];
-let isSyncing = false;
 
-// ===== СИНХРОНИЗАЦИЯ =====
-function syncFromFirebase() {
-  isSyncing = true;
-  updateSyncIndicator();
+// Получаем данные из Telegram WebApp
+function initUser() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const tgUser = urlParams.get('tgUser');
   
-  onValue(ordersRef, (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      orders = Object.values(data);
-      console.log('Synced:', orders.length, 'orders');
-    } else {
-      orders = [];
+  if (tgUser) {
+    try {
+      const userData = JSON.parse(decodeURIComponent(tgUser));
+      currentUserId = 'user_' + userData.id;
+      const username = userData.username || userData.first_name || 'Пользователь';
+      
+      // Проверка на админа (замените ID на ваш)
+      const ADMIN_IDS = ['user_5059571966']; // Ваш Telegram ID
+      isAdmin = ADMIN_IDS.includes(currentUserId);
+      
+      document.getElementById('userInfo').innerHTML = `
+        👤 ${username} 
+        ${isAdmin ? '<span class="admin-badge">АДМИН</span>' : ''}
+      `;
+      
+      console.log('User:', currentUserId, 'Admin:', isAdmin);
+    } catch(e) {
+      currentUserId = 'user_anonymous_' + Math.random().toString(36).substr(2, 9);
+      document.getElementById('userInfo').textContent = '👤 Анонимный пользователь';
     }
-    renderOrders();
-    updateStats();
-    isSyncing = false;
-    updateSyncIndicator();
-    
-    document.getElementById('status').innerHTML = '<span class="sync-indicator"></span>✅ Готово (синхронизация)';
-    document.getElementById('status').className = 'status-sync';
-  }, (error) => {
-    console.error('Sync error:', error);
-    isSyncing = false;
-    updateSyncIndicator();
-    document.getElementById('status').innerHTML = '<span class="sync-indicator"></span>⚠️ Ошибка';
-  });
-}
-
-function saveToFirebase() {
-  if (isSyncing) return;
-  
-  set(ordersRef, orders)
-    .then(() => console.log('Saved to Firebase'))
-    .catch((error) => {
-      console.error('Save error:', error);
-      showToast('⚠️ Ошибка сохранения');
-    });
-}
-
-function updateSyncIndicator() {
-  const indicator = document.getElementById('syncIndicator');
-  if (isSyncing) {
-    indicator.classList.add('syncing');
   } else {
-    indicator.classList.remove('syncing');
+    // Если не из Telegram
+    let savedId = localStorage.getItem('orders_user_id');
+    if (!savedId) {
+      savedId = 'user_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('orders_user_id', savedId);
+    }
+    currentUserId = savedId;
+    document.getElementById('userInfo').textContent = '👤 ' + currentUserId;
+  }
+  
+  if (isAdmin) {
+    document.getElementById('adminFilters').style.display = 'block';
+    document.getElementById('btnDownloadAll').style.display = 'block';
+  }
+  
+  loadOrders();
+}
+
+// ===== ЗАГРУЗКА ЗАКАЗОВ =====
+function loadOrders() {
+  document.getElementById('status').innerHTML = '⏳ Синхронизация...';
+  
+  if (isAdmin && currentFilter === 'all') {
+    // Админ видит все заказы
+    const allOrdersRef = ref(db, 'all_orders');
+    onValue(allOrdersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        allOrders = Object.values(data);
+        orders = allOrders;
+      } else {
+        orders = [];
+      }
+      renderOrders();
+      updateStats();
+      document.getElementById('status').innerHTML = '✅ Все заказы загружены';
+    });
+  } else {
+    // Пользователь видит только свои
+    const userOrdersRef = ref(db, `orders/${currentUserId}`);
+    onValue(userOrdersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        orders = Object.values(data);
+      } else {
+        orders = [];
+      }
+      renderOrders();
+      updateStats();
+      document.getElementById('status').innerHTML = '✅ Мои заказы загружены';
+    });
   }
 }
 
-// ===== GLOBAL FUNCTIONS =====
+// ===== ДОБАВЛЕНИЕ ЗАКАЗА =====
 window.addOrder = function() {
   const zso = document.getElementById('zso').value.trim();
   const phone = document.getElementById('phone').value.trim();
@@ -293,80 +365,99 @@ window.addOrder = function() {
   const price = priceEl ? parseInt(priceEl) : 0;
   const notes = document.getElementById('notes').value.trim();
 
-  if (!zso) {
-    showToast('Введите номер ЗСО/ЗНД');
-    return;
-  }
-  if (!service) {
-    showToast('Выберите услугу');
-    return;
-  }
+  if (!zso) { showToast('Введите номер ЗСО/ЗНД'); return; }
+  if (!service) { showToast('Выберите услугу'); return; }
 
   const order = {
     id: Date.now(),
+    userId: currentUserId,
     zsoNumber: zso,
     phone: phone,
     service: service,
     price: price,
     notes: notes,
-    date: new Date().toLocaleString('ru-RU')
+    date: new Date().toLocaleString('ru-RU'),
+    createdAt: Date.now()
   };
 
-  orders.unshift(order);
-  saveToFirebase();
+  // Сохраняем в личную папку пользователя
+  const userOrderRef = ref(db, `orders/${currentUserId}/${order.id}`);
+  set(userOrderRef, order);
 
+  // Если админ - добавляем в общую базу
+  if (isAdmin) {
+    const allOrderRef = ref(db, `all_orders/${order.id}`);
+    set(allOrderRef, order);
+  }
+
+  // Очищаем форму
   document.getElementById('zso').value = '';
   document.getElementById('phone').value = '';
   serviceSelect.selectedIndex = 0;
   document.getElementById('notes').value = '';
   document.getElementById('priceDisplay').style.display = 'none';
 
-  renderOrders();
-  updateStats();
   showToast('✅ Заказ добавлен!');
 };
 
-window.deleteOrder = function(id) {
-  if (!confirm('Удалить заказ?')) return;
-  
-  orders = orders.filter(o => o.id !== id);
-  saveToFirebase();
-  renderOrders();
-  updateStats();
-  showToast('Заказ удалён');
+// ===== ФИЛЬТРЫ =====
+window.setFilter = function(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  loadOrders();
 };
 
+// ===== ВЫГРУЗКА EXCEL =====
 window.downloadXLSX = function() {
-  if (orders.length === 0) {
-    showToast('Нет заказов для выгрузки');
-    return;
-  }
+  if (orders.length === 0) { showToast('Нет заказов'); return; }
+  createAndDownloadXLSX(orders, 'мои_заказы');
+};
 
+window.downloadAllXLSX = function() {
+  if (!isAdmin) return;
+  if (allOrders.length === 0) { showToast('Нет заказов'); return; }
+  createAndDownloadXLSX(allOrders, 'все_заказы');
+};
+
+function createAndDownloadXLSX(ordersData, fileNamePrefix) {
   const data = [
     ['📋 УЧЁТ ЗАКАЗОВ'],
     ['Дата выгрузки:', new Date().toLocaleString('ru-RU')],
+    ['Пользователь:', currentUserId],
     [],
-    ['№ п/п', 'Дата', '№ ЗСО/ЗНД', 'Телефон', 'Услуга', 'Сумма (₽)', 'Примечания']
+    ['№', 'Дата', 'Пользователь', '№ ЗСО', 'Телефон', 'Услуга', 'Сумма', 'Примечания']
   ];
 
-  orders.forEach((o, i) => {
-    data.push([i + 1, o.date, o.zsoNumber, o.phone || '', o.service, o.price, o.notes || '']);
+  ordersData.forEach((o, i) => {
+    data.push([
+      i + 1,
+      o.date,
+      o.userId || 'unknown',
+      o.zsoNumber,
+      o.phone || '',
+      o.service,
+      o.price,
+      o.notes || ''
+    ]);
   });
 
-  const totalSum = orders.reduce((sum, o) => sum + (o.price || 0), 0);
-  data.push([], ['ИТОГО:', '', '', '', 'Заказов:', orders.length, '']);
-  data.push(['', '', '', '', 'Общая сумма:', totalSum, '']);
+  const totalSum = ordersData.reduce((sum, o) => sum + (o.price || 0), 0);
+  data.push([], ['ИТОГО:', '', '', '', 'Заказов:', ordersData.length, 'Сумма:', totalSum]);
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{wch: 5}, {wch: 18}, {wch: 15}, {wch: 15}, {wch: 30}, {wch: 12}, {wch: 25}];
+  ws['!cols'] = [{wch: 5}, {wch: 18}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 30}, {wch: 12}, {wch: 25}];
   XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
 
-  const fileName = 'заказы_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  const fileName = `${fileNamePrefix}_${new Date().toISOString().slice(0,10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
-  showToast('✅ Excel файл скачан!');
-};
+  showToast('✅ Файл скачан!');
+}
 
+// ===== ОТОБРАЖЕНИЕ =====
 function renderOrders() {
   const list = document.getElementById('ordersList');
   
@@ -378,10 +469,13 @@ function renderOrders() {
   let html = '';
   orders.forEach(o => {
     html += '<div class="order-item">';
+    if (isAdmin && o.userId) {
+      html += `<span class="user-tag">👤 ${o.userId}</span>`;
+    }
     html += '<button class="delete-btn" onclick="deleteOrder(' + o.id + ')">×</button>';
     html += '<h4>№ ' + escapeHtml(o.zsoNumber) + '</h4>';
     html += '<p>🔧 ' + escapeHtml(o.service) + '</p>';
-    html += '<p class="price">' + o.price.toLocaleString('ru-RU') + ' ₽</p>';
+    html += '<p class="price">' + o.price.toLocaleString() + ' ₽</p>';
     if (o.phone) html += '<p>📞 ' + escapeHtml(o.phone) + '</p>';
     if (o.notes) html += '<p>📝 ' + escapeHtml(o.notes) + '</p>';
     html += '<div class="date">' + o.date + '</div>';
@@ -390,6 +484,20 @@ function renderOrders() {
 
   list.innerHTML = html;
 }
+
+window.deleteOrder = function(id) {
+  if (!confirm('Удалить заказ?')) return;
+  
+  if (isAdmin) {
+    const allOrderRef = ref(db, `all_orders/${id}`);
+    set(allOrderRef, null);
+  }
+  
+  const userOrderRef = ref(db, `orders/${currentUserId}/${id}`);
+  set(userOrderRef, null);
+  
+  showToast('Заказ удалён');
+};
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -401,7 +509,7 @@ function escapeHtml(text) {
 function updateStats() {
   document.getElementById('totalOrders').textContent = orders.length;
   const sum = orders.reduce((a, o) => a + (o.price || 0), 0);
-  document.getElementById('totalSum').textContent = sum.toLocaleString('ru-RU') + '₽';
+  document.getElementById('totalSum').textContent = sum.toLocaleString() + '₽';
 }
 
 function showToast(msg) {
@@ -412,10 +520,7 @@ function showToast(msg) {
 }
 
 // ===== INIT =====
-window.addEventListener('DOMContentLoaded', () => {
-  console.log('App loaded with Firebase');
-  syncFromFirebase();
-});
+window.addEventListener('DOMContentLoaded', initUser);
 </script>
 </body>
 </html>
