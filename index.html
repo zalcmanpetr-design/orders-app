@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Заказы">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
 <title>Учёт заказов</title>
+<!-- Подключаем библиотеку SheetJS для работы с Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
@@ -80,6 +80,11 @@ color: #e8e0d5;
 background: linear-gradient(135deg, #6b5a3d 0%, #4a3d28 100%);
 border: 1px solid #7b6a4d;
 margin-top: 10px;
+}
+.btn-success {
+background: linear-gradient(135deg, #4a5c3d 0%, #2d3d28 100%);
+border: 1px solid #5a6b4d;
+margin-top: 8px;
 }
 .stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
 .stat-box {
@@ -209,9 +214,12 @@ border: 1px solid #3d3128;
 </div>
 </div>
 
-<!-- НОВАЯ КНОПКА ВЫГРУЗКИ -->
-<button class="btn btn-warning" id="downloadBtn" onclick="downloadReconciliation()">
-📥 Выгрузка сверки
+<!-- КНОПКИ ВЫГРУЗКИ -->
+<button class="btn btn-success" onclick="downloadXLSX()">
+📊 Выгрузка в Excel (XLSX)
+</button>
+<button class="btn btn-warning" onclick="downloadReconciliation()">
+📥 Выгрузка сверки (TXT)
 </button>
 
 <h3 style="margin:12px 0;color:#b8a89a;">📋 Список заказов</h3>
@@ -243,15 +251,6 @@ deferredPrompt = null;
 document.getElementById('installBanner').classList.remove('show');
 });
 }
-}
-
-// ===== SERVICE WORKER =====
-if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js').then(() => {
-console.log('Service Worker registered');
-}).catch(err => {
-console.log('SW registration failed:', err);
-});
 }
 
 // ===== INIT =====
@@ -334,7 +333,73 @@ updateStats();
 showToast('✅ Заказ добавлен!');
 }
 
-// ===== 📥 ВЫГРУЗКА СВЕРКИ (НОВАЯ ФУНКЦИЯ) =====
+// ===== 📊 ВЫГРУЗКА В EXCEL (XLSX) =====
+function downloadXLSX() {
+if (orders.length === 0) {
+showToast('Нет заказов для выгрузки');
+return;
+}
+
+// Подготавливаем данные для Excel
+var data = [
+['📋 УЧЁТ ЗАКАЗОВ'],
+['Дата выгрузки:', new Date().toLocaleString('ru-RU')],
+[],
+['№ п/п', 'Дата', '№ ЗСО/ЗНД', 'Телефон', 'Услуга', 'Сумма (₽)', 'Примечания']
+];
+
+// Добавляем заказы
+for (var i = 0; i < orders.length; i++) {
+var o = orders[i];
+data.push([
+i + 1,
+o.date,
+o.zsoNumber,
+o.phone || '',
+o.service,
+o.price,
+o.notes || ''
+]);
+}
+
+// Итого
+var totalSum = 0;
+for (var j = 0; j < orders.length; j++) {
+totalSum += orders[j].price || 0;
+}
+
+data.push([]);
+data.push(['ИТОГО:', '', '', '', 'Заказов:', orders.length, '']);
+data.push(['', '', '', '', 'Общая сумма:', totalSum, '']);
+
+// Создаём рабочую книгу и лист
+var wb = XLSX.utils.book_new();
+var ws = XLSX.utils.aoa_to_sheet(data);
+
+// Настраиваем ширину колонок
+ws['!cols'] = [
+{wch: 5},  // № п/п
+{wch: 18}, // Дата
+{wch: 15}, // № ЗСО
+{wch: 15}, // Телефон
+{wch: 30}, // Услуга
+{wch: 12}, // Сумма
+{wch: 25}  // Примечания
+];
+
+// Добавляем лист в книгу
+XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
+
+// Генерируем имя файла с датой
+var fileName = 'заказы_' + new Date().toISOString().slice(0,10) + '.xlsx';
+
+// Скачиваем файл
+XLSX.writeFile(wb, fileName);
+
+showToast('✅ Excel файл скачан!');
+}
+
+// ===== 📥 ВЫГРУЗКА СВЕРКИ (TXT) =====
 function downloadReconciliation() {
 if (orders.length === 0) {
 showToast('Нет заказов для выгрузки');
@@ -367,7 +432,7 @@ text += 'ИТОГО:\n';
 text += 'Заказов: ' + orders.length + '\n';
 text += 'Общая сумма: ' + totalSum.toLocaleString('ru-RU') + ' ₽\n';
 
-// Создаём файл и скачиваем
+// Создаём blob и скачиваем
 var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
 var url = URL.createObjectURL(blob);
 var a = document.createElement('a');
