@@ -1,474 +1,787 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#3d2817">
-<title>Учёт заказов</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body {
-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-background: linear-gradient(135deg, #1a1a1a 0%, #2d1f16 50%, #1a1a1a 100%);
-min-height: 100vh;
-padding: 15px;
-color: #e8e0d5;
-font-size: 16px;
-line-height: 1.5;
-}
-.container { max-width: 500px; margin: 0 auto; }
-.header { text-align: center; margin-bottom: 20px; }
-.header h1 { font-size: 1.5rem; margin-bottom: 6px; color: #d4c4b0; }
-.header p { font-size: 0.85rem; color: #8b7a6a; }
-.status-sync { color: #4a5c3d; font-weight: 600; }
-.card {
-background: #24201c;
-border-radius: 12px;
-padding: 18px;
-margin-bottom: 15px;
-border: 1px solid #3d3128;
-}
-.form-group { margin-bottom: 15px; }
-label { display: block; margin-bottom: 6px; color: #b8a89a; font-size: 0.85rem; }
-input, select, textarea {
-width: 100%;
-padding: 14px;
-border: 1px solid #4a3f35;
-border-radius: 10px;
-font-size: 16px;
-background: #1a1714;
-color: #e8e0d5;
--webkit-appearance: none;
-font-family: inherit;
-}
-input:focus, select:focus, textarea:focus { outline: none; border-color: #8b5a2b; }
-textarea { resize: none; min-height: 80px; }
-.price-display {
-background: #2a2018;
-padding: 14px;
-border-radius: 10px;
-text-align: center;
-font-size: 1.25rem;
-font-weight: 600;
-color: #a67c52;
-margin-top: 10px;
-}
-.btn {
-width: 100%;
-padding: 16px;
-border: none;
-border-radius: 10px;
-font-size: 1rem;
-font-weight: 600;
-cursor: pointer;
-background: linear-gradient(135deg, #5c3d2e 0%, #3d2817 100%);
-color: #e8e0d5;
-}
-.btn:active { transform: scale(0.96); opacity: 0.9; }
-.btn-success {
-background: linear-gradient(135deg, #4a5c3d 0%, #2d3d28 100%);
-margin-top: 10px;
-}
-.stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
-.stat-box {
-background: #2d2018;
-padding: 14px;
-border-radius: 10px;
-text-align: center;
-flex: 1;
-}
-.stat-box h3 { font-size: 1.6rem; margin-bottom: 4px; color: #d4c4b0; }
-.stat-box p { font-size: 0.75rem; color: #8b7a6a; }
-.order-item {
-background: #1f1b17;
-border-radius: 12px;
-padding: 16px;
-margin-bottom: 12px;
-border-left: 3px solid #6b4e3d;
-position: relative;
-}
-.order-item h4 { color: #d4c4b0; margin-bottom: 6px; padding-right: 40px; }
-.order-item p { color: #9a8a7a; font-size: 0.9rem; margin-bottom: 3px; }
-.order-item .price { color: #a67c52; font-weight: 600; margin-top: 6px; }
-.order-item .user-id {
-background: #3d4a5c;
-color: #d4e0e8;
-padding: 2px 8px;
-border-radius: 4px;
-font-size: 0.7rem;
-display: inline-block;
-margin-bottom: 6px;
-}
-.order-item .date { font-size: 0.75rem; color: #6b5a4a; margin-top: 8px; }
-.delete-btn {
-position: absolute;
-top: 12px;
-right: 12px;
-background: none;
-border: none;
-color: #5c2e2e;
-font-size: 1.6rem;
-cursor: pointer;
-}
-.filter {
-display: flex;
-gap: 8px;
-margin-bottom: 15px;
-}
-.filter-btn {
-flex: 1;
-padding: 10px;
-background: #2d2824;
-border: 1px solid #3d3128;
-border-radius: 8px;
-color: #8b7a6a;
-cursor: pointer;
-}
-.filter-btn.active {
-background: #3d2817;
-border-color: #8b5a2b;
-color: #e8e0d5;
-}
-.user-info {
-background: #2d3d4a;
-padding: 10px;
-border-radius: 8px;
-margin-bottom: 15px;
-text-align: center;
-font-size: 0.85rem;
-color: #d4e0e8;
-}
-.admin-badge {
-background: #4a5c3d;
-color: white;
-padding: 2px 8px;
-border-radius: 4px;
-font-size: 0.7rem;
-margin-left: 6px;
-}
-.toast {
-position: fixed;
-top: 50%;
-left: 50%;
-transform: translate(-50%, -50%);
-background: rgba(45, 32, 24, 0.95);
-padding: 16px 24px;
-border-radius: 12px;
-opacity: 0;
-transition: opacity 0.3s;
-pointer-events: none;
-z-index: 3000;
-}
-.toast.show { opacity: 1; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3d2817">
+    <title>Учёт заказов</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1f16 50%, #1a1a1a 100%);
+            min-height: 100vh;
+            padding: 15px;
+            color: #e8e0d5;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 6px;
+            color: #d4c4b0;
+        }
+
+        .header p {
+            font-size: 0.85rem;
+            color: #8b7a6a;
+        }
+
+        .status-sync {
+            color: #4a5c3d;
+            font-weight: 600;
+        }
+
+        .card {
+            background: #24201c;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 15px;
+            border: 1px solid #3d3128;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #b8a89a;
+            font-size: 0.85rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #4a3f35;
+            border-radius: 10px;
+            font-size: 16px;
+            background: #1a1714;
+            color: #e8e0d5;
+            -webkit-appearance: none;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #8b5a2b;
+        }
+
+        textarea {
+            resize: none;
+            min-height: 80px;
+        }
+
+        .price-display {
+            background: #2a2018;
+            padding: 14px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #a67c52;
+            margin-top: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, #5c3d2e 0%, #3d2817 100%);
+            color: #e8e0d5;
+            transition: all 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4a5c3d 0%, #2d3d28 100%);
+            margin-top: 10px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #8b3d3d 0%, #5c2e2e 100%);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: #2d2018;
+            padding: 14px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-box h3 {
+            font-size: 1.6rem;
+            margin-bottom: 4px;
+            color: #d4c4b0;
+        }
+
+        .stat-box p {
+            font-size: 0.75rem;
+            color: #8b7a6a;
+        }
+
+        .order-item {
+            background: #1f1b17;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 3px solid #6b4e3d;
+            position: relative;
+        }
+
+        .order-item h4 {
+            color: #d4c4b0;
+            margin-bottom: 6px;
+            padding-right: 40px;
+        }
+
+        .order-item p {
+            color: #9a8a7a;
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+        }
+
+        .order-item .price {
+            color: #a67c52;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .order-item .user-id {
+            background: #3d4a5c;
+            color: #d4e0e8;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+
+        .order-item .date {
+            font-size: 0.75rem;
+            color: #6b5a4a;
+            margin-top: 8px;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #8b3d3d;
+            font-size: 1.6rem;
+            cursor: pointer;
+        }
+
+        .filter {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .filter-btn {
+            flex: 1;
+            padding: 10px;
+            background: #2d2824;
+            border: 1px solid #3d3128;
+            border-radius: 8px;
+            color: #8b7a6a;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: #3d2817;
+            border-color: #8b5a2b;
+            color: #e8e0d5;
+        }
+
+        .user-info {
+            background: #2d3d4a;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #d4e0e8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .admin-badge {
+            background: #4a5c3d;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .logout-btn {
+            background: #5c2e2e;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(45, 32, 24, 0.95);
+            padding: 16px 24px;
+            border-radius: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 3000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .admin-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #3d3128;
+        }
+
+        .admin-title {
+            color: #d4c4b0;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .monthly-report {
+            background: #2d2818;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-<div class="header">
-<h1>📋 Учёт заказов</h1>
-<p id="status">⏳ Подключение...</p>
-</div>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Учёт заказов</h1>
+            <p id="status">⏳ Подключение...</p>
+        </div>
 
-<div id="userInfo" class="user-info">Загрузка...</div>
+        <div id="userInfo" class="user-info">Загрузка...</div>
 
-<div class="card">
-<div class="form-group">
-<label>№ ЗСО/ЗНД *</label>
-<input type="text" id="zso" placeholder="Введите номер">
-</div>
-<div class="form-group">
-<label>Телефон</label>
-<input type="tel" id="phone" placeholder="+7 (___) ___-__-__">
-</div>
-<div class="form-group">
-<label>Услуга *</label>
-<select id="service">
-<option value="">Выберите услугу</option>
-<option value="Демонтаж вытяжки" data-price="575">Демонтаж вытяжки — 575₽</option>
-<option value="Монтаж духовки" data-price="1600">Монтаж духовки — 1 600₽</option>
-<option value="Монтаж варочной панели" data-price="1900">Монтаж варочной панели — 1 900₽</option>
-<option value="ТВ до 43&quot;" data-price="1250">ТВ до 43" — 1 250₽</option>
-<option value="ТВ 50&quot;-55&quot;" data-price="2000">ТВ 50"-55" — 2 000₽</option>
-<option value="Монтаж вытяжки" data-price="1350">Монтаж вытяжки — 1 350₽</option>
-</select>
-<div id="priceDisplay" class="price-display" style="display:none;">
-Стоимость: <span id="priceValue">0</span> ₽
-</div>
-</div>
-<div class="form-group">
-<label>Примечания</label>
-<textarea id="notes" placeholder="Доп. информация..."></textarea>
-</div>
-<button class="btn" onclick="addOrder()">✓ ДОБАВИТЬ ЗАКАЗ</button>
-</div>
+        <div class="card">
+            <div class="form-group">
+                <label>№ ЗСО/ЗНД *</label>
+                <input type="text" id="zso" placeholder="Введите номер" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Телефон</label>
+                <input type="tel" id="phone" placeholder="+7 (___) ___-__-__" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Услуга *</label>
+                <select id="service">
+                    <option value="">Выберите услугу</option>
+                    <option value="Демонтаж вытяжки" data-price="575">Демонтаж вытяжки — 575₽</option>
+                    <option value="Монтаж духовки" data-price="1600">Монтаж духовки — 1 600₽</option>
+                    <option value="Монтаж варочной панели" data-price="1900">Монтаж варочной панели — 1 900₽</option>
+                    <option value="ТВ до 43&quot;" data-price="1250">ТВ до 43" — 1 250₽</option>
+                    <option value="ТВ 50&quot;-55&quot;" data-price="2000">ТВ 50"-55" — 2 000₽</option>
+                    <option value="Монтаж вытяжки" data-price="1350">Монтаж вытяжки — 1 350₽</option>
+                    <option value="Кондиционер" data-price="3000">Кондиционер — 3 000₽</option>
+                    <option value="Стиральная машина" data-price="1500">Стиральная машина — 1 500₽</option>
+                </select>
+                <div id="priceDisplay" class="price-display" style="display:none;">
+                    Стоимость: <span id="priceValue">0</span> ₽
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Примечания</label>
+                <textarea id="notes" placeholder="Доп. информация..."></textarea>
+            </div>
+            <button class="btn" onclick="addOrder()">✓ ДОБАВИТЬ ЗАКАЗ</button>
+        </div>
 
-<!-- Админ панель -->
-<div id="adminPanel" class="card" style="display:none;">
-<h3 style="margin-bottom:12px;color:#b8a89a;">👑 Админ-панель</h3>
-<div class="filter">
-<button class="filter-btn active" onclick="setFilter('all')">Все заказы</button>
-<button class="filter-btn" onclick="setFilter('my')">Мои заказы</button>
-</div>
-</div>
+        <!-- Админ панель -->
+        <div id="adminPanel" class="card" style="display:none;">
+            <h3 class="admin-title">👑 Админ-панель</h3>
+            
+            <div class="filter">
+                <button class="filter-btn active" onclick="setFilter('all')">Все заказы</button>
+                <button class="filter-btn" onclick="setFilter('my')">Мои заказы</button>
+            </div>
 
-<div class="card">
-<div class="stats">
-<div class="stat-box"><h3 id="totalOrders">0</h3><p>Заказов</p></div>
-<div class="stat-box"><h3 id="totalSum">0₽</h3><p>Сумма</p></div>
-</div>
+            <div class="monthly-report">
+                <h4 style="margin-bottom:10px;color:#b8a89a;">📅 Месячный отчёт</h4>
+                <p>Текущий месяц: <span id="currentMonth"></span></p>
+                <p>Заказов: <span id="monthOrders">0</span></p>
+                <p>Сумма: <span id="monthSum">0₽</span></p>
+                <button class="btn" onclick="generateMonthlyReport()" style="margin-top:10px;">📊 Сформировать отчёт</button>
+                <button class="btn btn-danger" onclick="clearMonthlyOrders()" style="margin-top:10px;">🗑 Очистить месяц</button>
+            </div>
 
-<button class="btn btn-success" onclick="downloadXLSX()">📊 Выгрузка в Excel</button>
+            <button class="btn btn-success" onclick="downloadAllOrdersXLSX()">📥 Выгрузить все заказы</button>
+        </div>
 
-<h3 style="margin:12px 0;color:#b8a89a;">📋 Список заказов</h3>
-<div id="ordersList"></div>
-</div>
-</div>
+        <div class="card">
+            <div class="stats">
+                <div class="stat-box"><h3 id="totalOrders">0</h3><p>Заказов</p></div>
+                <div class="stat-box"><h3 id="totalSum">0₽</h3><p>Сумма</p></div>
+            </div>
 
-<div id="toast" class="toast"></div>
+            <button class="btn btn-success" onclick="downloadCurrentViewXLSX()">📊 Выгрузка в Excel</button>
 
-<!-- FIREBASE SDK (CDN) -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+            <h3 style="margin:12px 0;color:#b8a89a;">📋 Список заказов</h3>
+            <div id="ordersList"></div>
+        </div>
+    </div>
 
-// ===== FIREBASE CONFIG =====
-const firebaseConfig = {
-  apiKey: "AIzaSyAtAtC5t7ycUjOIWPB5GGngiyDo-riS_6M",
-  authDomain: "orders-app-3d46a.firebaseapp.com",
-  databaseURL: "https://orders-app-3d46a-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "orders-app-3d46a",
-  storageBucket: "orders-app-3d46a.appspot.com",
-  messagingSenderId: "879326100377",
-  appId: "1:879326100377:web:681fe6393d7f327963108",
-  measurementId: "G-Y9MMTR52WJ"
-};
+    <div id="toast" class="toast"></div>
 
-// Инициализация Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
-let currentUserId = null;
-let isAdmin = false;
-let currentFilter = 'all';
-let allOrders = [];
-
-// ===== ИНИЦИАЛИЗАЦИЯ ПОЛЬЗОВАТЕЛЯ =====
-function initUser() {
-  const tgWebApp = window.Telegram?.WebApp;
-  
-  if (tgWebApp?.initDataUnsafe?.user) {
-    // Из Telegram
-    const tgUser = tgWebApp.initDataUnsafe.user;
-    currentUserId = 'user_' + tgUser.id;
-    const username = tgUser.username || tgUser.first_name || 'Пользователь';
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     
-    // 🔥 ЗАМЕНИТЕ НА ВАШ TELEGRAM ID!
-    const MY_TG_ID = 'user_5059571966';
-    isAdmin = (currentUserId === MY_TG_ID);
-    
-    document.getElementById('userInfo').innerHTML = `
-      👤 ${username} ${isAdmin ? '<span class="admin-badge">АДМИН</span>' : ''}
-    `;
-    console.log('✅ Telegram user:', currentUserId, 'Admin:', isAdmin);
-  } else {
-    // Локальный режим (не из Telegram)
-    let savedId = localStorage.getItem('orders_user_id');
-    if (!savedId) {
-      savedId = 'user_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('orders_user_id', savedId);
-    }
-    currentUserId = savedId;
-    document.getElementById('userInfo').textContent = '👤 ' + currentUserId + ' (локально)';
-    console.log('✅ Local user:', currentUserId);
-  }
-  
-  if (isAdmin) {
-    document.getElementById('adminPanel').style.display = 'block';
-  }
-  
-  loadOrders();
-}
+    <script>
+        // Telegram WebApp API
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.expand();
+            tg.ready();
+        }
 
-// ===== ЗАГРУЗКА ЗАКАЗОВ =====
-function loadOrders() {
-  document.getElementById('status').textContent = '🔄 Синхронизация...';
-  
-  const ordersRef = ref(db, 'orders');
-  onValue(ordersRef, (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      allOrders = Object.values(data);
-      console.log('📊 Загружено заказов:', allOrders.length);
-    } else {
-      allOrders = [];
-    }
-    updateDisplay();
-    document.getElementById('status').innerHTML = '<span class="status-sync">✅ Подключено</span>';
-  }, (error) => {
-    console.error('Firebase error:', error);
-    document.getElementById('status').textContent = '❌ Ошибка подключения';
-  });
-}
+        // API URL (замените на ваш URL после деплоя на GitHub)
+        const API_URL = 'https://ваш-юзернейм.github.io/orders-bot/api.php';
+        
+        let currentUser = null;
+        let isAdmin = false;
+        let currentFilter = 'all';
+        let allOrders = [];
 
-// ===== ОБНОВЛЕНИЕ ОТОБРАЖЕНИЯ =====
-function updateDisplay() {
-  const orders = isAdmin && currentFilter === 'all' 
-    ? allOrders 
-    : allOrders.filter(o => o.userId === currentUserId);
-  
-  renderOrders(orders);
-  updateStats(orders);
-}
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initUser();
+            loadOrders();
+            updateMonthDisplay();
+        });
 
-// ===== ДОБАВЛЕНИЕ ЗАКАЗА =====
-window.addOrder = function() {
-  const zso = document.getElementById('zso').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const serviceSelect = document.getElementById('service');
-  const service = serviceSelect.options[serviceSelect.selectedIndex].value;
-  const priceEl = serviceSelect.options[serviceSelect.selectedIndex].getAttribute('data-price');
-  const price = priceEl ? parseInt(priceEl) : 0;
-  const notes = document.getElementById('notes').value.trim();
+        async function initUser() {
+            const tgUser = tg?.initDataUnsafe?.user;
+            
+            if (tgUser) {
+                currentUser = {
+                    id: `user_${tgUser.id}`,
+                    name: tgUser.username || tgUser.first_name || 'Пользователь',
+                    isAdmin: checkIsAdmin(tgUser.id)
+                };
+            } else {
+                // Локальный режим
+                let localId = localStorage.getItem('local_user_id');
+                if (!localId) {
+                    localId = `user_${Math.random().toString(36).substr(2, 9)}`;
+                    localStorage.setItem('local_user_id', localId);
+                }
+                currentUser = {
+                    id: localId,
+                    name: localId,
+                    isAdmin: false
+                };
+            }
 
-  if (!zso) { showToast('Введите номер ЗСО/ЗНД'); return; }
-  if (!service) { showToast('Выберите услугу'); return; }
+            isAdmin = currentUser.isAdmin;
+            
+            document.getElementById('userInfo').innerHTML = `
+                <span>👤 ${currentUser.name}</span>
+                ${isAdmin ? '<span class="admin-badge">АДМИН</span>' : ''}
+                <button class="logout-btn" onclick="logout()">Выйти</button>
+            `;
 
-  const order = {
-    id: Date.now(),
-    userId: currentUserId,
-    zsoNumber: zso,
-    phone: phone,
-    service: service,
-    price: price,
-    notes: notes,
-    date: new Date().toLocaleString('ru-RU'),
-    createdAt: Date.now()
-  };
+            if (isAdmin) {
+                document.getElementById('adminPanel').style.display = 'block';
+            }
+        }
 
-  const newOrderRef = push(ref(db, 'orders'));
-  set(newOrderRef, order).then(() => {
-    console.log('✅ Заказ сохранён');
-  }).catch(err => {
-    console.error('Ошибка:', err);
-    showToast('⚠️ Ошибка сохранения');
-  });
+        function checkIsAdmin(userId) {
+            // Замените на ваши ID администраторов
+            const adminIds = [5059571966, 123456789]; // Ваши Telegram ID
+            return adminIds.includes(userId);
+        }
 
-  document.getElementById('zso').value = '';
-  document.getElementById('phone').value = '';
-  serviceSelect.selectedIndex = 0;
-  document.getElementById('notes').value = '';
-  document.getElementById('priceDisplay').style.display = 'none';
+        async function loadOrders() {
+            try {
+                document.getElementById('status').textContent = '🔄 Синхронизация...';
+                
+                const response = await axios.get(`${API_URL}?action=getAll`);
+                
+                if (response.data.success) {
+                    allOrders = response.data.data || [];
+                    console.log('📊 Загружено заказов:', allOrders.length);
+                    updateDisplay();
+                    document.getElementById('status').innerHTML = '<span class="status-sync">✅ Подключено</span>';
+                } else {
+                    throw new Error(response.data.error);
+                }
+            } catch (error) {
+                console.error('Firebase error:', error);
+                document.getElementById('status').textContent = '❌ Ошибка подключения';
+                showToast('Ошибка загрузки данных');
+            }
+        }
 
-  showToast('✅ Заказ добавлен!');
-};
+        async function addOrder() {
+            const zso = document.getElementById('zso').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const serviceSelect = document.getElementById('service');
+            const service = serviceSelect.options[serviceSelect.selectedIndex].value;
+            const price = parseInt(serviceSelect.options[serviceSelect.selectedIndex].getAttribute('data-price')) || 0;
+            const notes = document.getElementById('notes').value.trim();
 
-// ===== ФИЛЬТРЫ =====
-window.setFilter = function(filter) {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
-  updateDisplay();
-};
+            if (!zso) { showToast('Введите номер ЗСО/ЗНД'); return; }
+            if (!service) { showToast('Выберите услугу'); return; }
 
-// ===== ВЫГРУЗКА В EXCEL =====
-window.downloadXLSX = function() {
-  const orders = isAdmin && currentFilter === 'all' 
-    ? allOrders 
-    : allOrders.filter(o => o.userId === currentUserId);
-  
-  if (orders.length === 0) { showToast('Нет заказов'); return; }
+            const order = {
+                userId: currentUser.id,
+                userName: currentUser.name,
+                zsoNumber: zso,
+                phone: phone,
+                service: service,
+                price: price,
+                notes: notes,
+                date: new Date().toLocaleString('ru-RU'),
+                month: getMonthKey()
+            };
 
-  const data = [
-    ['📋 УЧЁТ ЗАКАЗОВ'],
-    ['Дата выгрузки:', new Date().toLocaleString('ru-RU')],
-    [],
-    ['№', 'Дата', 'Пользователь', '№ ЗСО', 'Телефон', 'Услуга', 'Сумма', 'Примечания']
-  ];
+            try {
+                const response = await axios.post(API_URL, {
+                    action: 'add',
+                    order: order
+                });
 
-  orders.forEach((o, i) => {
-    data.push([i + 1, o.date, o.userId || '', o.zsoNumber, o.phone || '', o.service, o.price, o.notes || '']);
-  });
+                if (response.data.success) {
+                    showToast('✅ Заказ добавлен!');
+                    
+                    // Очистка формы
+                    document.getElementById('zso').value = '';
+                    document.getElementById('phone').value = '';
+                    serviceSelect.selectedIndex = 0;
+                    document.getElementById('notes').value = '';
+                    document.getElementById('priceDisplay').style.display = 'none';
+                    
+                    // Обновление списка
+                    await loadOrders();
+                } else {
+                    throw new Error(response.data.error);
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showToast('⚠️ Ошибка сохранения');
+            }
+        }
 
-  const totalSum = orders.reduce((sum, o) => sum + (o.price || 0), 0);
-  data.push([], ['ИТОГО:', '', '', '', 'Заказов:', orders.length, 'Сумма:', totalSum]);
+        async function deleteOrder(id) {
+            if (!confirm('Удалить заказ?')) return;
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{wch: 5}, {wch: 18}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 30}, {wch: 12}, {wch: 25}];
-  XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
+            try {
+                const response = await axios.post(API_URL, {
+                    action: 'delete',
+                    id: id
+                });
 
-  const fileName = 'заказы_' + new Date().toISOString().slice(0,10) + '.xlsx';
-  XLSX.writeFile(wb, fileName);
-  showToast('✅ Файл скачан!');
-};
+                if (response.data.success) {
+                    showToast('✅ Заказ удалён');
+                    await loadOrders();
+                } else {
+                    throw new Error(response.data.error);
+                }
+            } catch (error) {
+                console.error('Ошибка удаления:', error);
+                showToast('❌ Ошибка удаления');
+            }
+        }
 
-// ===== ОТОБРАЖЕНИЕ ЗАКАЗОВ =====
-function renderOrders(orders) {
-  const list = document.getElementById('ordersList');
-  
-  if (orders.length === 0) {
-    list.innerHTML = '<p style="text-align:center;color:#5c4d42;padding:40px;">Нет заказов</p>';
-    return;
-  }
+        async function generateMonthlyReport() {
+            if (!confirm('Сформировать месячный отчёт?')) return;
 
-  let html = '';
-  orders.forEach(o => {
-    html += '<div class="order-item">';
-    if (isAdmin && o.userId) {
-      html += `<span class="user-id">👤 ${o.userId.replace('user_', '')}</span>`;
-    }
-    html += '<button class="delete-btn" onclick="deleteOrder(' + o.id + ')">×</button>';
-    html += '<h4>№ ' + escapeHtml(o.zsoNumber) + '</h4>';
-    html += '<p>🔧 ' + escapeHtml(o.service) + '</p>';
-    html += '<p class="price">' + o.price.toLocaleString() + ' ₽</p>';
-    if (o.phone) html += '<p>📞 ' + escapeHtml(o.phone) + '</p>';
-    if (o.notes) html += '<p>📝 ' + escapeHtml(o.notes) + '</p>';
-    html += '<div class="date">' + o.date + '</div>';
-    html += '</div>';
-  });
+            try {
+                const monthKey = getMonthKey();
+                const monthOrders = allOrders.filter(o => o.month === monthKey);
+                
+                const response = await axios.post(API_URL, {
+                    action: 'generateReport',
+                    month: monthKey,
+                    orders: monthOrders
+                });
 
-  list.innerHTML = html;
-}
+                if (response.data.success) {
+                    showToast('✅ Отчёт сформирован');
+                    
+                    // Скачивание отчёта
+                    downloadMonthlyReport(monthOrders, monthKey);
+                }
+            } catch (error) {
+                console.error('Ошибка формирования отчёта:', error);
+                showToast('❌ Ошибка формирования отчёта');
+            }
+        }
 
-// ===== УДАЛЕНИЕ =====
-window.deleteOrder = function(id) {
-  if (!confirm('Удалить заказ?')) return;
-  
-  const orderKey = Object.keys(allOrders).find(key => allOrders[key].id === id);
-  if (orderKey) {
-    const orderRef = ref(db, `orders/${orderKey}`);
-    set(orderRef, null);
-    showToast('Заказ удалён');
-  }
-};
+        async function clearMonthlyOrders() {
+            if (!confirm('Очистить все заказы за текущий месяц? Это действие нельзя отменить!')) return;
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+            try {
+                const monthKey = getMonthKey();
+                
+                const response = await axios.post(API_URL, {
+                    action: 'clearMonth',
+                    month: monthKey
+                });
 
-function updateStats(orders) {
-  document.getElementById('totalOrders').textContent = orders.length;
-  const sum = orders.reduce((a, o) => a + (o.price || 0), 0);
-  document.getElementById('totalSum').textContent = sum.toLocaleString() + '₽';
-}
+                if (response.data.success) {
+                    showToast('✅ Месяц очищен');
+                    await loadOrders();
+                } else {
+                    throw new Error(response.data.error);
+                }
+            } catch (error) {
+                console.error('Ошибка очистки:', error);
+                showToast('❌ Ошибка очистки');
+            }
+        }
 
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3000);
-}
+        function downloadMonthlyReport(orders, monthKey) {
+            const data = [
+                ['📊 МЕСЯЧНЫЙ ОТЧЁТ'],
+                [`Период: ${formatMonth(monthKey)}`],
+                ['Дата формирования:', new Date().toLocaleString('ru-RU')],
+                [],
+                ['№', 'Дата', 'Сотрудник', '№ ЗСО', 'Телефон', 'Услуга', 'Сумма', 'Примечания']
+            ];
 
-// ===== ЗАПУСК =====
-window.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 App loaded with Firebase');
-  initUser();
-});
-</script>
+            orders.forEach((o, i) => {
+                data.push([
+                    i + 1,
+                    o.date,
+                    o.userName || '',
+                    o.zsoNumber,
+                    o.phone || '',
+                    o.service,
+                    o.price,
+                    o.notes || ''
+                ]);
+            });
+
+            const totalSum = orders.reduce((sum, o) => sum + (o.price || 0), 0);
+            data.push(
+                [],
+                ['ИТОГО:', '', '', '', 'Заказов:', orders.length, 'Сумма:', totalSum]
+            );
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, 'Месячный отчёт');
+
+            const fileName = `отчёт_${monthKey}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        function downloadCurrentViewXLSX() {
+            const orders = getCurrentViewOrders();
+            downloadOrdersToExcel(orders, 'текущий_список');
+        }
+
+        function downloadAllOrdersXLSX() {
+            downloadOrdersToExcel(allOrders, 'все_заказы');
+        }
+
+        function downloadOrdersToExcel(orders, filename) {
+            if (orders.length === 0) { showToast('Нет заказов'); return; }
+
+            const data = [
+                ['📋 УЧЁТ ЗАКАЗОВ'],
+                ['Дата выгрузки:', new Date().toLocaleString('ru-RU')],
+                [],
+                ['№', 'Дата', 'Сотрудник', '№ ЗСО', 'Телефон', 'Услуга', 'Сумма', 'Примечания']
+            ];
+
+            orders.forEach((o, i) => {
+                data.push([
+                    i + 1,
+                    o.date,
+                    o.userName || '',
+                    o.zsoNumber,
+                    o.phone || '',
+                    o.service,
+                    o.price,
+                    o.notes || ''
+                ]);
+            });
+
+            const totalSum = orders.reduce((sum, o) => sum + (o.price || 0), 0);
+            data.push(
+                [],
+                ['ИТОГО:', '', '', '', 'Заказов:', orders.length, 'Сумма:', totalSum]
+            );
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
+
+            const fileName = `${filename}_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast('✅ Файл скачан!');
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const orders = getCurrentViewOrders();
+            renderOrders(orders);
+            updateStats(orders);
+            updateMonthDisplay();
+        }
+
+        function getCurrentViewOrders() {
+            if (isAdmin && currentFilter === 'all') {
+                return allOrders;
+            }
+            return allOrders.filter(o => o.userId === currentUser.id);
+        }
+
+        function renderOrders(orders) {
+            const list = document.getElementById('ordersList');
+            
+            if (orders.length === 0) {
+                list.innerHTML = '<p style="text-align:center;color:#5c4d42;padding:40px;">Нет заказов</p>';
+                return;
+            }
+
+            orders.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            list.innerHTML = orders.map(o => `
+                <div class="order-item">
+                    ${isAdmin && o.userName ? `<span class="user-id">👤 ${o.userName}</span>` : ''}
+                    <button class="delete-btn" onclick="deleteOrder('${o.id}')">×</button>
+                    <h4>№ ${escapeHtml(o.zsoNumber)}</h4>
+                    <p>🔧 ${escapeHtml(o.service)}</p>
+                    <p class="price">${o.price.toLocaleString()} ₽</p>
+                    ${o.phone ? `<p>📞 ${escapeHtml(o.phone)}</p>` : ''}
+                    ${o.notes ? `<p>📝 ${escapeHtml(o.notes)}</p>` : ''}
+                    <div class="date">${o.date}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats(orders) {
+            document.getElementById('totalOrders').textContent = orders.length;
+            const sum = orders.reduce((a, o) => a + (o.price || 0), 0);
+            document.getElementById('totalSum').textContent = sum.toLocaleString() + '₽';
+        }
+
+        function updateMonthDisplay() {
+            const monthKey = getMonthKey();
+            const monthOrders = allOrders.filter(o => o.month === monthKey);
+            const monthSum = monthOrders.reduce((a, o) => a + (o.price || 0), 0);
+            
+            document.getElementById('currentMonth').textContent = formatMonth(monthKey);
+            document.getElementById('monthOrders').textContent = monthOrders.length;
+            document.getElementById('monthSum').textContent = monthSum.toLocaleString() + '₽';
+        }
+
+        function getMonthKey() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function formatMonth(monthKey) {
+            const [year, month] = monthKey.split('-');
+            const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                           'Июль', 'Август', 'Сентябрь', 'Окторябрь', 'Ноябрь', 'Декабрь'];
+            return `${months[parseInt(month) - 1]} ${year}`;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function logout() {
+            if (tg) {
+                tg.close();
+            } else {
+                localStorage.removeItem('local_user_id');
+                location.reload();
+            }
+        }
+
+        // Показ цены при выборе услуги
+        document.getElementById('service').addEventListener('change', function() {
+            const price = this.options[this.selectedIndex]?.getAttribute('data-price');
+            if (price) {
+                document.getElementById('priceValue').textContent = price;
+                document.getElementById('priceDisplay').style.display = 'block';
+            } else {
+                document.getElementById('priceDisplay').style.display = 'none';
+            }
+        });
+
+        // Форматирование телефона
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+            e.target.value = !x[2] ? x[1] : '+7 (' + x[2] + ') ' + x[3] + (x[4] ? '-' + x[4] : '') + (x[5] ? '-' + x[5] : '');
+        });
+    </script>
 </body>
 </html>
