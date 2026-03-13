@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#3d2817">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Заказы">
 <title>Учёт заказов</title>
-<!-- Подключаем библиотеку SheetJS для работы с Excel -->
+<!-- SheetJS для Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -28,6 +26,7 @@ line-height: 1.5;
 .header h1 { font-size: 1.5rem; margin-bottom: 6px; color: #d4c4b0; }
 .header p { font-size: 0.85rem; color: #8b7a6a; }
 .status-ready { color: #4a5c3d; font-weight: 600; }
+.status-sync { color: #4a5c6b; font-weight: 600; }
 .card {
 background: #24201c;
 border-radius: 12px;
@@ -117,25 +116,6 @@ cursor: pointer;
 width: 36px;
 height: 36px;
 }
-.install-banner {
-background: #2d3d4a;
-padding: 12px;
-border-radius: 10px;
-text-align: center;
-margin-bottom: 15px;
-display: none;
-border: 1px solid #4a5c6b;
-}
-.install-banner.show { display: block; }
-.install-banner button {
-margin-top: 8px;
-padding: 10px 20px;
-background: #4a5c6b;
-color: white;
-border: none;
-border-radius: 6px;
-cursor: pointer;
-}
 .toast {
 position: fixed;
 top: 50%;
@@ -151,19 +131,29 @@ z-index: 3000;
 border: 1px solid #3d3128;
 }
 .toast.show { opacity: 1; }
+.sync-indicator {
+display: inline-block;
+width: 8px;
+height: 8px;
+border-radius: 50%;
+background: #4a5c3d;
+margin-right: 6px;
+}
+.sync-indicator.syncing {
+background: #4a5c6b;
+animation: pulse 1s infinite;
+}
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.5; }
+}
 </style>
 </head>
 <body>
 <div class="container">
 <div class="header">
 <h1>📋 Учёт заказов</h1>
-<p id="status">⏳ Загрузка...</p>
-</div>
-
-<div id="installBanner" class="install-banner">
-<strong>📲 Установите приложение</strong><br>
-Нажмите кнопку ниже для установки
-<button onclick="installApp()">Установить</button>
+<p id="status"><span class="sync-indicator" id="syncIndicator"></span>⏳ Подключение...</p>
 </div>
 
 <div class="card">
@@ -209,7 +199,6 @@ border: 1px solid #3d3128;
 </div>
 </div>
 
-<!-- ОДНА КНОПКА EXCEL -->
 <button class="btn btn-success" onclick="downloadXLSX()">
 📊 Выгрузка в Excel (XLSX)
 </button>
@@ -221,275 +210,212 @@ border: 1px solid #3d3128;
 
 <div id="toast" class="toast"></div>
 
-<script>
+<!-- FIREBASE SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAtAtC5t7ycUjOIWPB5GGngiyDo-riS_6M",
+  authDomain: "orders-app-3d46a.firebaseapp.com",
+  databaseURL: "https://orders-app-3d46a-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "orders-app-3d46a",
+  storageBucket: "orders-app-3d46a.appspot.com",
+  messagingSenderId: "879326100377",
+  appId: "1:879326100377:web:681fe6393d7f327963108",
+  measurementId: "G-Y9MMTR52WJ"
+};
+
+// Инициализация Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const ordersRef = ref(db, 'orders');
+
 let orders = [];
-let deferredPrompt = null;
+let isSyncing = false;
 
-// ===== PWA INSTALL =====
-window.addEventListener('beforeinstallprompt', e => {
-e.preventDefault();
-deferredPrompt = e;
-document.getElementById('installBanner').classList.add('show');
-});
-
-function installApp() {
-if (deferredPrompt) {
-deferredPrompt.prompt();
-deferredPrompt.userChoice.then(choiceResult => {
-if (choiceResult.outcome === 'accepted') {
-showToast('✅ Приложение установлено!');
-}
-deferredPrompt = null;
-document.getElementById('installBanner').classList.remove('show');
-});
-}
-}
-
-// ===== INIT =====
-window.onload = function() {
-console.log('App loaded');
-
-try {
-var saved = localStorage.getItem('orders_app');
-if (saved) {
-orders = JSON.parse(saved);
-console.log('Loaded ' + orders.length + ' orders');
-}
-} catch(e) {
-console.log('Load error:', e.message);
-orders = [];
+// ===== СИНХРОНИЗАЦИЯ =====
+function syncFromFirebase() {
+  isSyncing = true;
+  updateSyncIndicator();
+  
+  onValue(ordersRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      orders = Object.values(data);
+      console.log('Synced:', orders.length, 'orders');
+    } else {
+      orders = [];
+    }
+    renderOrders();
+    updateStats();
+    isSyncing = false;
+    updateSyncIndicator();
+    
+    document.getElementById('status').innerHTML = '<span class="sync-indicator"></span>✅ Готово (синхронизация)';
+    document.getElementById('status').className = 'status-sync';
+  }, (error) => {
+    console.error('Sync error:', error);
+    isSyncing = false;
+    updateSyncIndicator();
+    document.getElementById('status').innerHTML = '<span class="sync-indicator"></span>⚠️ Ошибка';
+  });
 }
 
-document.getElementById('status').textContent = '✅ Готово';
-document.getElementById('status').className = 'status-ready';
+function saveToFirebase() {
+  if (isSyncing) return;
+  
+  set(ordersRef, orders)
+    .then(() => console.log('Saved to Firebase'))
+    .catch((error) => {
+      console.error('Save error:', error);
+      showToast('⚠️ Ошибка сохранения');
+    });
+}
 
-renderOrders();
-updateStats();
+function updateSyncIndicator() {
+  const indicator = document.getElementById('syncIndicator');
+  if (isSyncing) {
+    indicator.classList.add('syncing');
+  } else {
+    indicator.classList.remove('syncing');
+  }
+}
 
-console.log('Init complete');
+// ===== GLOBAL FUNCTIONS =====
+window.addOrder = function() {
+  const zso = document.getElementById('zso').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const serviceSelect = document.getElementById('service');
+  const service = serviceSelect.options[serviceSelect.selectedIndex].value;
+  const priceEl = serviceSelect.options[serviceSelect.selectedIndex].getAttribute('data-price');
+  const price = priceEl ? parseInt(priceEl) : 0;
+  const notes = document.getElementById('notes').value.trim();
+
+  if (!zso) {
+    showToast('Введите номер ЗСО/ЗНД');
+    return;
+  }
+  if (!service) {
+    showToast('Выберите услугу');
+    return;
+  }
+
+  const order = {
+    id: Date.now(),
+    zsoNumber: zso,
+    phone: phone,
+    service: service,
+    price: price,
+    notes: notes,
+    date: new Date().toLocaleString('ru-RU')
+  };
+
+  orders.unshift(order);
+  saveToFirebase();
+
+  document.getElementById('zso').value = '';
+  document.getElementById('phone').value = '';
+  serviceSelect.selectedIndex = 0;
+  document.getElementById('notes').value = '';
+  document.getElementById('priceDisplay').style.display = 'none';
+
+  renderOrders();
+  updateStats();
+  showToast('✅ Заказ добавлен!');
 };
 
-// ===== ADD ORDER =====
-function addOrder() {
-console.log('addOrder called');
-
-var zso = document.getElementById('zso').value.trim();
-var phone = document.getElementById('phone').value.trim();
-var serviceSelect = document.getElementById('service');
-var service = serviceSelect.options[serviceSelect.selectedIndex].value;
-var priceEl = serviceSelect.options[serviceSelect.selectedIndex].getAttribute('data-price');
-var price = priceEl ? parseInt(priceEl) : 0;
-var notes = document.getElementById('notes').value.trim();
-
-console.log('Values: zso=' + zso + ', service=' + service);
-
-if (!zso) {
-showToast('Введите номер ЗСО/ЗНД');
-return;
-}
-if (!service) {
-showToast('Выберите услугу');
-return;
-}
-
-var order = {
-id: Date.now(),
-zsoNumber: zso,
-phone: phone,
-service: service,
-price: price,
-notes: notes,
-date: new Date().toLocaleString('ru-RU')
+window.deleteOrder = function(id) {
+  if (!confirm('Удалить заказ?')) return;
+  
+  orders = orders.filter(o => o.id !== id);
+  saveToFirebase();
+  renderOrders();
+  updateStats();
+  showToast('Заказ удалён');
 };
 
-console.log('Order created: ' + order.id);
+window.downloadXLSX = function() {
+  if (orders.length === 0) {
+    showToast('Нет заказов для выгрузки');
+    return;
+  }
 
-orders.unshift(order);
+  const data = [
+    ['📋 УЧЁТ ЗАКАЗОВ'],
+    ['Дата выгрузки:', new Date().toLocaleString('ru-RU')],
+    [],
+    ['№ п/п', 'Дата', '№ ЗСО/ЗНД', 'Телефон', 'Услуга', 'Сумма (₽)', 'Примечания']
+  ];
 
-try {
-localStorage.setItem('orders_app', JSON.stringify(orders));
-console.log('Saved');
-} catch(e) {
-console.log('Save error:', e.message);
-}
+  orders.forEach((o, i) => {
+    data.push([i + 1, o.date, o.zsoNumber, o.phone || '', o.service, o.price, o.notes || '']);
+  });
 
-document.getElementById('zso').value = '';
-document.getElementById('phone').value = '';
-serviceSelect.selectedIndex = 0;
-document.getElementById('notes').value = '';
-document.getElementById('priceDisplay').style.display = 'none';
+  const totalSum = orders.reduce((sum, o) => sum + (o.price || 0), 0);
+  data.push([], ['ИТОГО:', '', '', '', 'Заказов:', orders.length, '']);
+  data.push(['', '', '', '', 'Общая сумма:', totalSum, '']);
 
-renderOrders();
-updateStats();
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch: 5}, {wch: 18}, {wch: 15}, {wch: 15}, {wch: 30}, {wch: 12}, {wch: 25}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
 
-showToast('✅ Заказ добавлен!');
-}
+  const fileName = 'заказы_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, fileName);
+  showToast('✅ Excel файл скачан!');
+};
 
-// ===== 📊 ВЫГРУЗКА В EXCEL (XLSX) =====
-function downloadXLSX() {
-if (orders.length === 0) {
-showToast('Нет заказов для выгрузки');
-return;
-}
-
-// Подготавливаем данные для Excel
-var data = [
-['📋 УЧЁТ ЗАКАЗОВ'],
-['Дата выгрузки:', new Date().toLocaleString('ru-RU')],
-[],
-['№ п/п', 'Дата', '№ ЗСО/ЗНД', 'Телефон', 'Услуга', 'Сумма (₽)', 'Примечания']
-];
-
-// Добавляем заказы
-for (var i = 0; i < orders.length; i++) {
-var o = orders[i];
-data.push([
-i + 1,
-o.date,
-o.zsoNumber,
-o.phone || '',
-o.service,
-o.price,
-o.notes || ''
-]);
-}
-
-// Итого
-var totalSum = 0;
-for (var j = 0; j < orders.length; j++) {
-totalSum += orders[j].price || 0;
-}
-
-data.push([]);
-data.push(['ИТОГО:', '', '', '', 'Заказов:', orders.length, '']);
-data.push(['', '', '', '', 'Общая сумма:', totalSum, '']);
-
-// Создаём рабочую книгу и лист
-var wb = XLSX.utils.book_new();
-var ws = XLSX.utils.aoa_to_sheet(data);
-
-// Настраиваем ширину колонок
-ws['!cols'] = [
-{wch: 5},
-{wch: 18},
-{wch: 15},
-{wch: 15},
-{wch: 30},
-{wch: 12},
-{wch: 25}
-];
-
-// Добавляем лист в книгу
-XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
-
-// Генерируем имя файла с датой
-var fileName = 'заказы_' + new Date().toISOString().slice(0,10) + '.xlsx';
-
-// Скачиваем файл
-XLSX.writeFile(wb, fileName);
-
-showToast('✅ Excel файл скачан!');
-}
-
-// ===== RENDER =====
 function renderOrders() {
-var list = document.getElementById('ordersList');
+  const list = document.getElementById('ordersList');
+  
+  if (orders.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:#5c4d42;padding:40px;">Нет заказов</p>';
+    return;
+  }
 
-if (orders.length === 0) {
-list.innerHTML = '<p style="text-align:center;color:#5c4d42;padding:40px;">Нет заказов</p>';
-return;
-}
+  let html = '';
+  orders.forEach(o => {
+    html += '<div class="order-item">';
+    html += '<button class="delete-btn" onclick="deleteOrder(' + o.id + ')">×</button>';
+    html += '<h4>№ ' + escapeHtml(o.zsoNumber) + '</h4>';
+    html += '<p>🔧 ' + escapeHtml(o.service) + '</p>';
+    html += '<p class="price">' + o.price.toLocaleString('ru-RU') + ' ₽</p>';
+    if (o.phone) html += '<p>📞 ' + escapeHtml(o.phone) + '</p>';
+    if (o.notes) html += '<p>📝 ' + escapeHtml(o.notes) + '</p>';
+    html += '<div class="date">' + o.date + '</div>';
+    html += '</div>';
+  });
 
-var html = '';
-for (var i = 0; i < orders.length; i++) {
-var o = orders[i];
-html += '<div class="order-item">';
-html += '<button class="delete-btn" onclick="deleteOrder(' + o.id + ')">×</button>';
-html += '<h4>№ ' + escapeHtml(o.zsoNumber) + '</h4>';
-html += '<p>🔧 ' + escapeHtml(o.service) + '</p>';
-html += '<p class="price">' + o.price.toLocaleString('ru-RU') + ' ₽</p>';
-if (o.phone) html += '<p>📞 ' + escapeHtml(o.phone) + '</p>';
-if (o.notes) html += '<p>📝 ' + escapeHtml(o.notes) + '</p>';
-html += '<div class="date">' + o.date + '</div>';
-html += '</div>';
-}
-
-list.innerHTML = html;
+  list.innerHTML = html;
 }
 
 function escapeHtml(text) {
-if (!text) return '';
-var div = document.createElement('div');
-div.textContent = text;
-return div.innerHTML;
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
-// ===== DELETE =====
-function deleteOrder(id) {
-if (!confirm('Удалить заказ?')) return;
-
-for (var i = 0; i < orders.length; i++) {
-if (orders[i].id === id) {
-orders.splice(i, 1);
-break;
-}
-}
-
-try {
-localStorage.setItem('orders_app', JSON.stringify(orders));
-} catch(e) {}
-
-renderOrders();
-updateStats();
-showToast('Заказ удалён');
-}
-
-// ===== STATS =====
 function updateStats() {
-document.getElementById('totalOrders').textContent = orders.length;
-
-var sum = 0;
-for (var i = 0; i < orders.length; i++) {
-sum += orders[i].price || 0;
-}
-document.getElementById('totalSum').textContent = sum.toLocaleString('ru-RU') + '₽';
+  document.getElementById('totalOrders').textContent = orders.length;
+  const sum = orders.reduce((a, o) => a + (o.price || 0), 0);
+  document.getElementById('totalSum').textContent = sum.toLocaleString('ru-RU') + '₽';
 }
 
-// ===== PRICE DISPLAY =====
-document.getElementById('service').addEventListener('change', function() {
-var price = this.options[this.selectedIndex].getAttribute('data-price');
-var display = document.getElementById('priceDisplay');
-if (price) {
-document.getElementById('priceValue').textContent = price;
-display.style.display = 'block';
-} else {
-display.style.display = 'none';
-}
-});
-
-// ===== PHONE MASK =====
-document.getElementById('phone').addEventListener('input', function(e) {
-var v = e.target.value.replace(/\D/g, '');
-if (v.length > 0) {
-if (v[0] === '7' || v[0] === '8') v = v.substring(1);
-var f = '+7';
-if (v.length > 0) f += ' (' + v.substring(0, 3);
-if (v.length >= 3) f += ') ' + v.substring(3, 6);
-if (v.length >= 6) f += '-' + v.substring(6, 8);
-if (v.length >= 8) f += '-' + v.substring(8, 10);
-e.target.value = f;
-}
-});
-
-// ===== TOAST =====
 function showToast(msg) {
-var toast = document.getElementById('toast');
-toast.textContent = msg;
-toast.classList.add('show');
-setTimeout(function() {
-toast.classList.remove('show');
-}, 3000);
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('App loaded with Firebase');
+  syncFromFirebase();
+});
 </script>
 </body>
 </html>
