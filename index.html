@@ -76,15 +76,10 @@ color: #e8e0d5;
 -webkit-appearance: none;
 }
 .btn:active { transform: scale(0.96); opacity: 0.9; }
-.btn-warning {
-background: linear-gradient(135deg, #6b5a3d 0%, #4a3d28 100%);
-border: 1px solid #7b6a4d;
-margin-top: 10px;
-}
 .btn-success {
 background: linear-gradient(135deg, #4a5c3d 0%, #2d3d28 100%);
 border: 1px solid #5a6b4d;
-margin-top: 8px;
+margin-top: 10px;
 }
 .stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
 .stat-box {
@@ -214,12 +209,9 @@ border: 1px solid #3d3128;
 </div>
 </div>
 
-<!-- КНОПКИ ВЫГРУЗКИ -->
+<!-- ОДНА КНОПКА EXCEL -->
 <button class="btn btn-success" onclick="downloadXLSX()">
 📊 Выгрузка в Excel (XLSX)
-</button>
-<button class="btn btn-warning" onclick="downloadReconciliation()">
-📥 Выгрузка сверки (TXT)
 </button>
 
 <h3 style="margin:12px 0;color:#b8a89a;">📋 Список заказов</h3>
@@ -378,13 +370,13 @@ var ws = XLSX.utils.aoa_to_sheet(data);
 
 // Настраиваем ширину колонок
 ws['!cols'] = [
-{wch: 5},  // № п/п
-{wch: 18}, // Дата
-{wch: 15}, // № ЗСО
-{wch: 15}, // Телефон
-{wch: 30}, // Услуга
-{wch: 12}, // Сумма
-{wch: 25}  // Примечания
+{wch: 5},
+{wch: 18},
+{wch: 15},
+{wch: 15},
+{wch: 30},
+{wch: 12},
+{wch: 25}
 ];
 
 // Добавляем лист в книгу
@@ -397,53 +389,6 @@ var fileName = 'заказы_' + new Date().toISOString().slice(0,10) + '.xlsx';
 XLSX.writeFile(wb, fileName);
 
 showToast('✅ Excel файл скачан!');
-}
-
-// ===== 📥 ВЫГРУЗКА СВЕРКИ (TXT) =====
-function downloadReconciliation() {
-if (orders.length === 0) {
-showToast('Нет заказов для выгрузки');
-return;
-}
-
-// Формируем текст отчёта
-var text = '📋 СВЕРКА ЗАКАЗОВ\n';
-text += 'Дата выгрузки: ' + new Date().toLocaleString('ru-RU') + '\n';
-text += '================================\n\n';
-
-for (var i = 0; i < orders.length; i++) {
-var o = orders[i];
-text += (i+1) + '. № ' + o.zsoNumber + '\n';
-text += '   Услуга: ' + o.service + '\n';
-text += '   Сумма: ' + o.price.toLocaleString('ru-RU') + ' ₽\n';
-if (o.phone) text += '   Телефон: ' + o.phone + '\n';
-if (o.notes) text += '   Примечание: ' + o.notes + '\n';
-text += '   Дата: ' + o.date + '\n';
-text += '\n--------------------------------\n';
-}
-
-// Итого
-var totalSum = 0;
-for (var j = 0; j < orders.length; j++) {
-totalSum += orders[j].price || 0;
-}
-text += '\n================================\n';
-text += 'ИТОГО:\n';
-text += 'Заказов: ' + orders.length + '\n';
-text += 'Общая сумма: ' + totalSum.toLocaleString('ru-RU') + ' ₽\n';
-
-// Создаём blob и скачиваем
-var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-var url = URL.createObjectURL(blob);
-var a = document.createElement('a');
-a.href = url;
-a.download = 'сверка_заказов_' + new Date().toISOString().slice(0,10) + '.txt';
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-URL.revokeObjectURL(url);
-
-showToast('✅ Файл скачан!');
 }
 
 // ===== RENDER =====
