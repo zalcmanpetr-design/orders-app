@@ -2,9 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#3d2817">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Учёт заказов</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -18,28 +17,11 @@ color: #e8e0d5;
 font-size: 16px;
 line-height: 1.5;
 }
-.container { max-width: 600px; margin: 0 auto; }
-.header { text-align: center; margin-bottom: 20px; padding-top: 10px; }
+.container { max-width: 500px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 20px; }
 .header h1 { font-size: 1.5rem; margin-bottom: 6px; color: #d4c4b0; }
 .header p { font-size: 0.85rem; color: #8b7a6a; }
-.user-info {
-background: #2d3d4a;
-padding: 10px;
-border-radius: 8px;
-margin-bottom: 15px;
-font-size: 0.85rem;
-color: #d4e0e8;
-border: 1px solid #4a5c6b;
-text-align: center;
-}
-.admin-badge {
-background: #4a5c3d;
-color: white;
-padding: 4px 10px;
-border-radius: 6px;
-font-size: 0.75rem;
-margin-left: 8px;
-}
+.status-sync { color: #4a5c3d; font-weight: 600; }
 .card {
 background: #24201c;
 border-radius: 12px;
@@ -63,7 +45,7 @@ font-family: inherit;
 input:focus, select:focus, textarea:focus { outline: none; border-color: #8b5a2b; }
 textarea { resize: none; min-height: 80px; }
 .price-display {
-background: linear-gradient(135deg, #2a2018 0%, #1f1812 100%);
+background: #2a2018;
 padding: 14px;
 border-radius: 10px;
 text-align: center;
@@ -80,7 +62,6 @@ border-radius: 10px;
 font-size: 1rem;
 font-weight: 600;
 cursor: pointer;
-text-transform: uppercase;
 background: linear-gradient(135deg, #5c3d2e 0%, #3d2817 100%);
 color: #e8e0d5;
 }
@@ -107,15 +88,15 @@ margin-bottom: 12px;
 border-left: 3px solid #6b4e3d;
 position: relative;
 }
-.order-item h4 { color: #d4c4b0; margin-bottom: 6px; }
+.order-item h4 { color: #d4c4b0; margin-bottom: 6px; padding-right: 40px; }
 .order-item p { color: #9a8a7a; font-size: 0.9rem; margin-bottom: 3px; }
 .order-item .price { color: #a67c52; font-weight: 600; margin-top: 6px; }
-.order-item .user-tag {
+.order-item .user-id {
 background: #3d4a5c;
 color: #d4e0e8;
 padding: 2px 8px;
 border-radius: 4px;
-font-size: 0.75rem;
+font-size: 0.7rem;
 display: inline-block;
 margin-bottom: 6px;
 }
@@ -130,24 +111,41 @@ color: #5c2e2e;
 font-size: 1.6rem;
 cursor: pointer;
 }
-.filter-tabs {
+.filter {
 display: flex;
 gap: 8px;
 margin-bottom: 15px;
 }
-.filter-tab {
+.filter-btn {
 flex: 1;
-padding: 12px;
+padding: 10px;
 background: #2d2824;
 border: 1px solid #3d3128;
 border-radius: 8px;
 color: #8b7a6a;
 cursor: pointer;
 }
-.filter-tab.active {
+.filter-btn.active {
 background: #3d2817;
 border-color: #8b5a2b;
 color: #e8e0d5;
+}
+.user-info {
+background: #2d3d4a;
+padding: 10px;
+border-radius: 8px;
+margin-bottom: 15px;
+text-align: center;
+font-size: 0.85rem;
+color: #d4e0e8;
+}
+.admin-badge {
+background: #4a5c3d;
+color: white;
+padding: 2px 8px;
+border-radius: 4px;
+font-size: 0.7rem;
+margin-left: 6px;
 }
 .toast {
 position: fixed;
@@ -205,29 +203,22 @@ z-index: 3000;
 <button class="btn" onclick="addOrder()">✓ ДОБАВИТЬ ЗАКАЗ</button>
 </div>
 
-<div id="adminFilters" class="card" style="display:none;">
-<h3 style="margin-bottom:12px;color:#b8a89a;">📊 Фильтр</h3>
-<div class="filter-tabs">
-<button class="filter-tab active" onclick="setFilter('all')">Все заказы</button>
-<button class="filter-tab" onclick="setFilter('my')">Мои заказы</button>
+<!-- Админ панель -->
+<div id="adminPanel" class="card" style="display:none;">
+<h3 style="margin-bottom:12px;color:#b8a89a;">👑 Админ-панель</h3>
+<div class="filter">
+<button class="filter-btn active" onclick="setFilter('all')">Все заказы</button>
+<button class="filter-btn" onclick="setFilter('my')">Мои заказы</button>
 </div>
 </div>
 
 <div class="card">
 <div class="stats">
-<div class="stat-box">
-<h3 id="totalOrders">0</h3>
-<p>Заказов</p>
-</div>
-<div class="stat-box">
-<h3 id="totalSum">0₽</h3>
-<p>Сумма</p>
-</div>
+<div class="stat-box"><h3 id="totalOrders">0</h3><p>Заказов</p></div>
+<div class="stat-box"><h3 id="totalSum">0₽</h3><p>Сумма</p></div>
 </div>
 
-<button class="btn btn-success" onclick="downloadXLSX()">
-📊 Выгрузка в Excel
-</button>
+<button class="btn btn-success" onclick="downloadXLSX()">📊 Выгрузка в Excel</button>
 
 <h3 style="margin:12px 0;color:#b8a89a;">📋 Список заказов</h3>
 <div id="ordersList"></div>
@@ -236,6 +227,7 @@ z-index: 3000;
 
 <div id="toast" class="toast"></div>
 
+<!-- FIREBASE SDK (CDN) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
@@ -252,97 +244,85 @@ const firebaseConfig = {
   measurementId: "G-Y9MMTR52WJ"
 };
 
+// Инициализация Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ===== GLOBAL VARIABLES =====
+// ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
 let currentUserId = null;
 let isAdmin = false;
 let currentFilter = 'all';
 let allOrders = [];
-let myOrders = [];
 
-// ===== INIT USER =====
+// ===== ИНИЦИАЛИЗАЦИЯ ПОЛЬЗОВАТЕЛЯ =====
 function initUser() {
-  // Пытаемся получить данные из Telegram
   const tgWebApp = window.Telegram?.WebApp;
   
   if (tgWebApp?.initDataUnsafe?.user) {
+    // Из Telegram
     const tgUser = tgWebApp.initDataUnsafe.user;
     currentUserId = 'user_' + tgUser.id;
     const username = tgUser.username || tgUser.first_name || 'Пользователь';
     
-    // ЗАМЕНИТЕ на ваш Telegram ID!
-    const ADMIN_ID = 'user_5059571966'; // Ваш ID из @userinfobot
-    isAdmin = (currentUserId === ADMIN_ID);
+    // 🔥 ЗАМЕНИТЕ НА ВАШ TELEGRAM ID!
+    const MY_TG_ID = 'user_5059571966';
+    isAdmin = (currentUserId === MY_TG_ID);
     
     document.getElementById('userInfo').innerHTML = `
       👤 ${username} ${isAdmin ? '<span class="admin-badge">АДМИН</span>' : ''}
     `;
-    
     console.log('✅ Telegram user:', currentUserId, 'Admin:', isAdmin);
   } else {
-    // Не из Telegram - генерируем ID
+    // Локальный режим (не из Telegram)
     let savedId = localStorage.getItem('orders_user_id');
     if (!savedId) {
       savedId = 'user_' + Math.random().toString(36).substr(2, 9);
       localStorage.setItem('orders_user_id', savedId);
     }
     currentUserId = savedId;
-    document.getElementById('userInfo').textContent = '👤 ' + currentUserId + ' (локальный)';
+    document.getElementById('userInfo').textContent = '👤 ' + currentUserId + ' (локально)';
     console.log('✅ Local user:', currentUserId);
   }
   
   if (isAdmin) {
-    document.getElementById('adminFilters').style.display = 'block';
+    document.getElementById('adminPanel').style.display = 'block';
   }
   
-  // Загружаем заказы
   loadOrders();
 }
 
-// ===== LOAD ORDERS =====
+// ===== ЗАГРУЗКА ЗАКАЗОВ =====
 function loadOrders() {
   document.getElementById('status').textContent = '🔄 Синхронизация...';
   
-  // Подписываемся на ВСЕ заказы
-  const allOrdersRef = ref(db, 'all_orders');
-  onValue(allOrdersRef, (snapshot) => {
+  const ordersRef = ref(db, 'orders');
+  onValue(ordersRef, (snapshot) => {
     const data = snapshot.val();
     if (data) {
       allOrders = Object.values(data);
-      console.log('📊 All orders loaded:', allOrders.length);
+      console.log('📊 Загружено заказов:', allOrders.length);
     } else {
       allOrders = [];
     }
     updateDisplay();
-    document.getElementById('status').textContent = '✅ Подключено';
+    document.getElementById('status').innerHTML = '<span class="status-sync">✅ Подключено</span>';
+  }, (error) => {
+    console.error('Firebase error:', error);
+    document.getElementById('status').textContent = '❌ Ошибка подключения';
   });
-  
-  // Подписываемся на заказы текущего пользователя
-  if (currentUserId) {
-    const userOrdersRef = ref(db, `orders/${currentUserId}`);
-    onValue(userOrdersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        myOrders = Object.values(data);
-        console.log('👤 My orders loaded:', myOrders.length);
-      } else {
-        myOrders = [];
-      }
-      updateDisplay();
-    });
-  }
 }
 
-// ===== UPDATE DISPLAY =====
+// ===== ОБНОВЛЕНИЕ ОТОБРАЖЕНИЯ =====
 function updateDisplay() {
-  const orders = (isAdmin && currentFilter === 'all') ? allOrders : myOrders;
+  const orders = isAdmin && currentFilter === 'all' 
+    ? allOrders 
+    : allOrders.filter(o => o.userId === currentUserId);
+  
   renderOrders(orders);
   updateStats(orders);
 }
 
-// ===== ADD ORDER =====
+// ===== ДОБАВЛЕНИЕ ЗАКАЗА =====
 window.addOrder = function() {
   const zso = document.getElementById('zso').value.trim();
   const phone = document.getElementById('phone').value.trim();
@@ -367,22 +347,14 @@ window.addOrder = function() {
     createdAt: Date.now()
   };
 
-  // Сохраняем в ОБЩУЮ базу (все видят)
-  const newOrderRef = push(ref(db, 'all_orders'));
+  const newOrderRef = push(ref(db, 'orders'));
   set(newOrderRef, order).then(() => {
-    console.log('✅ Saved to all_orders');
+    console.log('✅ Заказ сохранён');
   }).catch(err => {
-    console.error('Save error:', err);
+    console.error('Ошибка:', err);
     showToast('⚠️ Ошибка сохранения');
   });
 
-  // Сохраняем в ЛИЧНУЮ папку пользователя
-  if (currentUserId) {
-    const userOrderRef = ref(db, `orders/${currentUserId}/${order.id}`);
-    set(userOrderRef, order);
-  }
-
-  // Очищаем форму
   document.getElementById('zso').value = '';
   document.getElementById('phone').value = '';
   serviceSelect.selectedIndex = 0;
@@ -392,17 +364,19 @@ window.addOrder = function() {
   showToast('✅ Заказ добавлен!');
 };
 
-// ===== FILTER =====
+// ===== ФИЛЬТРЫ =====
 window.setFilter = function(filter) {
   currentFilter = filter;
-  document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
   event.target.classList.add('active');
   updateDisplay();
 };
 
-// ===== DOWNLOAD EXCEL =====
+// ===== ВЫГРУЗКА В EXCEL =====
 window.downloadXLSX = function() {
-  const orders = (isAdmin && currentFilter === 'all') ? allOrders : myOrders;
+  const orders = isAdmin && currentFilter === 'all' 
+    ? allOrders 
+    : allOrders.filter(o => o.userId === currentUserId);
   
   if (orders.length === 0) { showToast('Нет заказов'); return; }
 
@@ -425,13 +399,12 @@ window.downloadXLSX = function() {
   ws['!cols'] = [{wch: 5}, {wch: 18}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 30}, {wch: 12}, {wch: 25}];
   XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
 
-  const prefix = (isAdmin && currentFilter === 'all') ? 'все_заказы' : 'мои_заказы';
-  const fileName = `${prefix}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const fileName = 'заказы_' + new Date().toISOString().slice(0,10) + '.xlsx';
   XLSX.writeFile(wb, fileName);
   showToast('✅ Файл скачан!');
 };
 
-// ===== RENDER =====
+// ===== ОТОБРАЖЕНИЕ ЗАКАЗОВ =====
 function renderOrders(orders) {
   const list = document.getElementById('ordersList');
   
@@ -443,8 +416,8 @@ function renderOrders(orders) {
   let html = '';
   orders.forEach(o => {
     html += '<div class="order-item">';
-    if (isAdmin && o.userId && currentFilter === 'all') {
-      html += `<span class="user-tag">👤 ${o.userId.replace('user_', '')}</span>`;
+    if (isAdmin && o.userId) {
+      html += `<span class="user-id">👤 ${o.userId.replace('user_', '')}</span>`;
     }
     html += '<button class="delete-btn" onclick="deleteOrder(' + o.id + ')">×</button>';
     html += '<h4>№ ' + escapeHtml(o.zsoNumber) + '</h4>';
@@ -459,23 +432,16 @@ function renderOrders(orders) {
   list.innerHTML = html;
 }
 
+// ===== УДАЛЕНИЕ =====
 window.deleteOrder = function(id) {
   if (!confirm('Удалить заказ?')) return;
   
-  // Удаляем из общей базы
-  const orderToDelete = allOrders.find(o => o.id === id);
-  if (orderToDelete) {
-    const allOrderRef = ref(db, `all_orders/${Object.keys(allOrders).find(key => allOrders[key].id === id)}`);
-    set(allOrderRef, null);
+  const orderKey = Object.keys(allOrders).find(key => allOrders[key].id === id);
+  if (orderKey) {
+    const orderRef = ref(db, `orders/${orderKey}`);
+    set(orderRef, null);
+    showToast('Заказ удалён');
   }
-  
-  // Удаляем из личной
-  if (currentUserId) {
-    const userOrderRef = ref(db, `orders/${currentUserId}/${id}`);
-    set(userOrderRef, null);
-  }
-  
-  showToast('Заказ удалён');
 };
 
 function escapeHtml(text) {
@@ -498,9 +464,9 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// ===== START =====
+// ===== ЗАПУСК =====
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 App loaded');
+  console.log('🚀 App loaded with Firebase');
   initUser();
 });
 </script>
