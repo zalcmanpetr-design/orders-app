@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#3d2817">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Заказы">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Учёт заказов</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+background: linear-gradient(135deg, #1a1a1a 0%, #2d1f16 50%, #1a1a1a 100%);
+min-height: 100vh;
+padding: 15px;
+padding-top: max(15px, env(safe-area-inset-top));
+padding-bottom: max(15px, env(safe-area-inset-bottom));
+color: #e8e0d5;
+font-size: 16px;
+line-height: 1.5;
+}
+.container { max-width: 500px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 20px; padding-top: 10px; }
+.header h1 { font-size: 1.5rem; margin-bottom: 6px; color: #d4c4b0; }
+.header p { font-size: 0.85rem; color: #8b7a6a; }
+.status-ready { color: #4a5c3d; font-weight: 600; }
+.card {
+background: #24201c;
+border-radius: 12px;
+padding: 18px;
+margin-bottom: 15px;
+border: 1px solid #3d3128;
+box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.form-group { margin-bottom: 15px; }
+label { display: block; margin-bottom: 6px; color: #b8a89a; font-size: 0.85rem; }
+input, select, textarea {
+width: 100%;
+padding: 14px;
+border: 1px solid #4a3f35;
+border-radius: 10px;
+font-size: 16px;
+background: #1a1714;
+color: #e8e0d5;
+-webkit-appearance: none;
+font-family: inherit;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: #8b5a2b; }
+textarea { resize: none; min-height: 80px; }
+.price-display {
+background: linear-gradient(135deg, #2a2018 0%, #1f1812 100%);
+padding: 14px;
+border-radius: 10px;
+text-align: center;
+font-size: 1.25rem;
+font-weight: 600;
+color: #a67c52;
+margin-top: 10px;
+border: 1px solid #4a3f35;
+}
+.btn {
+width: 100%;
+padding: 16px;
+border: none;
+border-radius: 10px;
+font-size: 1rem;
+font-weight: 600;
+cursor: pointer;
+text-transform: uppercase;
+background: linear-gradient(135deg, #5c3d2e 0%, #3d2817 100%);
+color: #e8e0d5;
+-webkit-appearance: none;
+}
+.btn:active { transform: scale(0.96); opacity: 0.9; }
+.stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
+.stat-box {
+background: #2d2018;
+padding: 14px;
+border-radius: 10px;
+text-align: center;
+flex: 1;
+border: 1px solid #3d3128;
+}
+.stat-box h3 { font-size: 1.6rem; margin-bottom: 4px; color: #d4c4b0; }
+.stat-box p { font-size: 0.75rem; color: #8b7a6a; }
+.order-item {
+background: #1f1b17;
+border-radius: 12px;
+padding: 16px;
+margin-bottom: 12px;
+border-left: 3px solid #6b4e3d;
+position: relative;
+border: 1px solid #2d2824;
+}
+.order-item h4 { color: #d4c4b0; margin-bottom: 6px; padding-right: 50px; }
+.order-item p { color: #9a8a7a; font-size: 0.9rem; margin-bottom: 3px; }
+.order-item .price { color: #a67c52; font-weight: 600; margin-top: 6px; }
+.order-item .date { font-size: 0.75rem; color: #6b5a4a; margin-top: 8px; }
+.delete-btn {
+position: absolute;
+top: 12px;
+right: 12px;
+background: none;
+border: none;
+color: #5c2e2e;
+font-size: 1.6rem;
+cursor: pointer;
+width: 36px;
+height: 36px;
+}
+.install-banner {
+background: #2d3d4a;
+padding: 12px;
+border-radius: 10px;
+text-align: center;
+margin-bottom: 15px;
+display: none;
+border: 1px solid #4a5c6b;
+}
+.install-banner.show { display: block; }
+.install-banner button {
+margin-top: 8px;
+padding: 10px 20px;
+background: #4a5c6b;
+color: white;
+border: none;
+border-radius: 6px;
+cursor: pointer;
+}
+.toast {
+position: fixed;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+background: rgba(45, 32, 24, 0.95);
+padding: 16px 24px;
+border-radius: 12px;
+opacity: 0;
+transition: opacity 0.3s;
+pointer-events: none;
+z-index: 3000;
+border: 1px solid #3d3128;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>📋 Учёт заказов</h1>
+<p id="status">⏳ Загрузка...</p>
+</div>
+
+<div id="installBanner" class="install-banner">
+<strong>📲 Установите приложение</strong><br>
+Нажмите кнопку ниже для установки
+<button onclick="installApp()">Установить</button>
+</div>
+
+<div class="card">
+<div class="form-group">
+<label>№ ЗСО/ЗНД *</label>
+<input type="text" id="zso" placeholder="Введите номер" autocomplete="off">
+</div>
+<div class="form-group">
+<label>Телефон</label>
+<input type="tel" id="phone" placeholder="+7 (___) ___-__-__" autocomplete="off">
+</div>
+<div class="form-group">
+<label>Услуга *</label>
+<select id="service">
+<option value="">Выберите услугу</option>
+<option value="Демонтаж вытяжки" data-price="575">Демонтаж вытяжки — 575₽</option>
+<option value="Монтаж духовки" data-price="1600">Монтаж духовки — 1 600₽</option>
+<option value="Монтаж варочной панели" data-price="1900">Монтаж варочной панели — 1 900₽</option>
+<option value="ТВ до 43&quot;" data-price="1250">ТВ до 43" — 1 250₽</option>
+<option value="ТВ 50&quot;-55&quot;" data-price="2000">ТВ 50"-55" — 2 000₽</option>
+<option value="Монтаж вытяжки" data-price="1350">Монтаж вытяжки — 1 350₽</option>
+</select>
+<div id="priceDisplay" class="price-display" style="display:none;">
+Стоимость: <span id="priceValue">0</span> ₽
+</div>
+</div>
+<div class="form-group">
+<label>Примечания</label>
+<textarea id="notes" placeholder="Доп. информация..."></textarea>
+</div>
+<button class="btn" id="addBtn" onclick="addOrder()">✓ ДОБАВИТЬ ЗАКАЗ</button>
+</div>
+
+<div class="card">
+<div class="stats">
+<div class="stat-box">
+<h3 id="totalOrders">0</h3>
+<p>Заказов</p>
+</div>
+<div class="stat-box">
+<h3 id="totalSum">0₽</h3>
+<p>Сумма</p>
+</div>
+</div>
+<h3 style="margin-bottom:12px;color:#b8a89a;">📋 Список заказов</h3>
+<div id="ordersList"></div>
+</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+let orders = [];
+let deferredPrompt = null;
+
+// ===== PWA INSTALL =====
+window.addEventListener('beforeinstallprompt', e => {
+e.preventDefault();
+deferredPrompt = e;
+document.getElementById('installBanner').classList.add('show');
+});
+
+function installApp() {
+if (deferredPrompt) {
+deferredPrompt.prompt();
+deferredPrompt.userChoice.then(choiceResult => {
+if (choiceResult.outcome === 'accepted') {
+showToast('✅ Приложение установлено!');
+}
+deferredPrompt = null;
+document.getElementById('installBanner').classList.remove('show');
+});
+}
+}
+
+// ===== SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+navigator.serviceWorker.register('sw.js').then(() => {
+console.log('Service Worker registered');
+}).catch(err => {
+console.log('SW registration failed:', err);
+});
+}
+
+// ===== INIT =====
+window.onload = function() {
+console.log('App loaded');
+
+try {
+var saved = localStorage.getItem('orders_app');
+if (saved) {
+orders = JSON.parse(saved);
+console.log('Loaded ' + orders.length + ' orders');
+}
+} catch(e) {
+console.log('Load error:', e.message);
+orders = [];
+}
+
+document.getElementById('status').textContent = '✅ Готово';
+document.getElementById('status').className = 'status-ready';
+
+renderOrders();
+updateStats();
+
+console.log('Init complete');
+};
+
+// ===== ADD ORDER =====
+function addOrder() {
+console.log('addOrder called');
+
+var zso = document.getElementById('zso').value.trim();
+var phone = document.getElementById('phone').value.trim();
+var serviceSelect = document.getElementById('service');
+var service = serviceSelect.options[serviceSelect.selectedIndex].value;
+var priceEl = serviceSelect.options[serviceSelect.selectedIndex].getAttribute('data-price');
+var price = priceEl ? parseInt(priceEl) : 0;
+var notes = document.getElementById('notes').value.trim();
+
+console.log('Values: zso=' + zso + ', service=' + service);
+
+if (!zso) {
+showToast('Введите номер ЗСО/ЗНД');
+return;
+}
+if (!service) {
+showToast('Выберите услугу');
+return;
+}
+
+var order = {
+id: Date.now(),
+zsoNumber: zso,
+phone: phone,
+service: service,
+price: price,
+notes: notes,
+date: new Date().toLocaleString('ru-RU')
+};
+
+console.log('Order created: ' + order.id);
+
+orders.unshift(order);
+
+try {
+localStorage.setItem('orders_app', JSON.stringify(orders));
+console.log('Saved');
+} catch(e) {
+console.log('Save error:', e.message);
+}
+
+document.getElementById('zso').value = '';
+document.getElementById('phone').value = '';
+serviceSelect.selectedIndex = 0;
+document.getElementById('notes').value = '';
+document.getElementById('priceDisplay').style.display = 'none';
+
+renderOrders();
+updateStats();
+
+showToast('✅ Заказ добавлен!');
+}
+
+// ===== RENDER =====
+function renderOrders() {
+var list = document.getElementById('ordersList');
+
+if (orders.length === 0) {
+list.innerHTML = '<p style="text-align:center;color:#5c4d42;padding:40px;">Нет заказов</p>';
+return;
+}
+
+var html = '';
+for (var i = 0; i < orders.length; i++) {
+var o = orders[i];
+html += '<div class="order-item">';
+html += '<button class="delete-btn" onclick="deleteOrder(' + o.id + ')">×</button>';
+html += '<h4>№ ' + escapeHtml(o.zsoNumber) + '</h4>';
+html += '<p>🔧 ' + escapeHtml(o.service) + '</p>';
+html += '<p class="price">' + o.price.toLocaleString() + ' ₽</p>';
+if (o.phone) html += '<p>📞 ' + escapeHtml(o.phone) + '</p>';
+if (o.notes) html += '<p>📝 ' + escapeHtml(o.notes) + '</p>';
+html += '<div class="date">' + o.date + '</div>';
+html += '</div>';
+}
+
+list.innerHTML = html;
+}
+
+function escapeHtml(text) {
+if (!text) return '';
+var div = document.createElement('div');
+div.textContent = text;
+return div.innerHTML;
+}
+
+// ===== DELETE =====
+function deleteOrder(id) {
+if (!confirm('Удалить заказ?')) return;
+
+for (var i = 0; i < orders.length; i++) {
+if (orders[i].id === id) {
+orders.splice(i, 1);
+break;
+}
+}
+
+try {
+localStorage.setItem('orders_app', JSON.stringify(orders));
+} catch(e) {}
+
+renderOrders();
+updateStats();
+showToast('Заказ удалён');
+}
+
+// ===== STATS =====
+function updateStats() {
+document.getElementById('totalOrders').textContent = orders.length;
+
+var sum = 0;
+for (var i = 0; i < orders.length; i++) {
+sum += orders[i].price || 0;
+}
+document.getElementById('totalSum').textContent = sum.toLocaleString() + '₽';
+}
+
+// ===== PRICE DISPLAY =====
+document.getElementById('service').addEventListener('change', function() {
+var price = this.options[this.selectedIndex].getAttribute('data-price');
+var display = document.getElementById('priceDisplay');
+if (price) {
+document.getElementById('priceValue').textContent = price;
+display.style.display = 'block';
+} else {
+display.style.display = 'none';
+}
+});
+
+// ===== PHONE MASK =====
+document.getElementById('phone').addEventListener('input', function(e) {
+var v = e.target.value.replace(/\D/g, '');
+if (v.length > 0) {
+if (v[0] === '7' || v[0] === '8') v = v.substring(1);
+var f = '+7';
+if (v.length > 0) f += ' (' + v.substring(0, 3);
+if (v.length >= 3) f += ') ' + v.substring(3, 6);
+if (v.length >= 6) f += '-' + v.substring(6, 8);
+if (v.length >= 8) f += '-' + v.substring(8, 10);
+e.target.value = f;
+}
+});
+
+// ===== TOAST =====
+function showToast(msg) {
+var toast = document.getElementById('toast');
+toast.textContent = msg;
+toast.classList.add('show');
+setTimeout(function() {
+toast.classList.remove('show');
+}, 3000);
+}
+</script>
+</body>
+</html>
