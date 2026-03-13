@@ -76,6 +76,11 @@ color: #e8e0d5;
 -webkit-appearance: none;
 }
 .btn:active { transform: scale(0.96); opacity: 0.9; }
+.btn-warning {
+background: linear-gradient(135deg, #6b5a3d 0%, #4a3d28 100%);
+border: 1px solid #7b6a4d;
+margin-top: 10px;
+}
 .stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
 .stat-box {
 background: #2d2018;
@@ -203,7 +208,13 @@ border: 1px solid #3d3128;
 <p>Сумма</p>
 </div>
 </div>
-<h3 style="margin-bottom:12px;color:#b8a89a;">📋 Список заказов</h3>
+
+<!-- НОВАЯ КНОПКА ВЫГРУЗКИ -->
+<button class="btn btn-warning" id="downloadBtn" onclick="downloadReconciliation()">
+📥 Выгрузка сверки
+</button>
+
+<h3 style="margin:12px 0;color:#b8a89a;">📋 Список заказов</h3>
 <div id="ordersList"></div>
 </div>
 </div>
@@ -323,6 +334,53 @@ updateStats();
 showToast('✅ Заказ добавлен!');
 }
 
+// ===== 📥 ВЫГРУЗКА СВЕРКИ (НОВАЯ ФУНКЦИЯ) =====
+function downloadReconciliation() {
+if (orders.length === 0) {
+showToast('Нет заказов для выгрузки');
+return;
+}
+
+// Формируем текст отчёта
+var text = '📋 СВЕРКА ЗАКАЗОВ\n';
+text += 'Дата выгрузки: ' + new Date().toLocaleString('ru-RU') + '\n';
+text += '================================\n\n';
+
+for (var i = 0; i < orders.length; i++) {
+var o = orders[i];
+text += (i+1) + '. № ' + o.zsoNumber + '\n';
+text += '   Услуга: ' + o.service + '\n';
+text += '   Сумма: ' + o.price.toLocaleString('ru-RU') + ' ₽\n';
+if (o.phone) text += '   Телефон: ' + o.phone + '\n';
+if (o.notes) text += '   Примечание: ' + o.notes + '\n';
+text += '   Дата: ' + o.date + '\n';
+text += '\n--------------------------------\n';
+}
+
+// Итого
+var totalSum = 0;
+for (var j = 0; j < orders.length; j++) {
+totalSum += orders[j].price || 0;
+}
+text += '\n================================\n';
+text += 'ИТОГО:\n';
+text += 'Заказов: ' + orders.length + '\n';
+text += 'Общая сумма: ' + totalSum.toLocaleString('ru-RU') + ' ₽\n';
+
+// Создаём файл и скачиваем
+var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+var url = URL.createObjectURL(blob);
+var a = document.createElement('a');
+a.href = url;
+a.download = 'сверка_заказов_' + new Date().toISOString().slice(0,10) + '.txt';
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+
+showToast('✅ Файл скачан!');
+}
+
 // ===== RENDER =====
 function renderOrders() {
 var list = document.getElementById('ordersList');
@@ -339,7 +397,7 @@ html += '<div class="order-item">';
 html += '<button class="delete-btn" onclick="deleteOrder(' + o.id + ')">×</button>';
 html += '<h4>№ ' + escapeHtml(o.zsoNumber) + '</h4>';
 html += '<p>🔧 ' + escapeHtml(o.service) + '</p>';
-html += '<p class="price">' + o.price.toLocaleString() + ' ₽</p>';
+html += '<p class="price">' + o.price.toLocaleString('ru-RU') + ' ₽</p>';
 if (o.phone) html += '<p>📞 ' + escapeHtml(o.phone) + '</p>';
 if (o.notes) html += '<p>📝 ' + escapeHtml(o.notes) + '</p>';
 html += '<div class="date">' + o.date + '</div>';
@@ -384,7 +442,7 @@ var sum = 0;
 for (var i = 0; i < orders.length; i++) {
 sum += orders[i].price || 0;
 }
-document.getElementById('totalSum').textContent = sum.toLocaleString() + '₽';
+document.getElementById('totalSum').textContent = sum.toLocaleString('ru-RU') + '₽';
 }
 
 // ===== PRICE DISPLAY =====
